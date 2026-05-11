@@ -50,10 +50,9 @@ export default function PatientDetail({
   fetchPatientBaseline({ patientId, clinicianKey, clinicId }),
 ])
   .then(([patientData, baselineData]) => {
-    if (cancelled) return;
-    setData(patientData);
-    setBaseline(baselineData);
-  })
+  setData(patientData);
+  setBaseline(baselineData);
+})
       .catch((err) => {
         if (cancelled) return;
         if (err.status === 401) onLogout();
@@ -224,14 +223,52 @@ export default function PatientDetail({
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 10,
-            fontWeight: 600,
-          }}
-        >
-          Ready for longitudinal comparison
-        </div>
+       <div
+  style={{
+    marginTop: 10,
+    fontWeight: 600,
+  }}
+>
+  Ready for longitudinal comparison
+</div>
+
+{baseline.voiceFeatures && (
+  <div
+    style={{
+      marginTop: 16,
+      paddingTop: 12,
+      borderTop: "1px solid #E5E7EB",
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 600,
+        marginBottom: 8,
+      }}
+    >
+      Voice Feature Metadata
+    </div>
+
+    <div className="muted">
+      <strong>Feature files:</strong>{" "}
+      {baseline.voiceFeatures.count ?? 0}
+    </div>
+
+    <div className="muted">
+  <strong>Latest file:</strong>{" "}
+  {baseline.voiceFeatures.latest?.key
+    ? baseline.voiceFeatures.latest.key.split("/").pop()
+    : "Not available"}
+</div>
+
+<div className="muted">
+  <strong>Latest extracted:</strong>{" "}
+  {baseline.voiceFeatures.latest?.lastModified
+    ? formatDateTime(baseline.voiceFeatures.latest.lastModified)
+    : "Not available"}
+</div>
+  </div>
+)}
       </div>
     )}
   </>
