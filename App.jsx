@@ -9,9 +9,9 @@ const STORAGE_KEY = "dex.clinician.key";
 export default function App() {
   // ── Resolve clinicId from URL on first render ───────────────────────────────
   const [clinicId] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("clinic") || null;
-  });
+  const params = new URLSearchParams(window.location.search);
+  return params.get("clinic") || "production-v1";
+});
 
   const [clinicianKey, setClinicianKey] = useState(() =>
     sessionStorage.getItem(STORAGE_KEY)
