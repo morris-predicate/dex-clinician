@@ -34,6 +34,7 @@ export default function PatientDetail({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [baseline, setBaseline] = useState(null);
+  const [showBaselineDetails, setShowBaselineDetails] = useState(false);
 
   // Transcript state: defaulted closed, loaded on demand.
   const [showTranscript, setShowTranscript] = useState(false);
@@ -116,10 +117,8 @@ export default function PatientDetail({
       <div className="detail-header-card">
         <div className="detail-name">{patient.name || "Unnamed patient"}</div>
              <div className="detail-meta">
-       {patient.dob && (
-         <span>
-           Age {Math.floor((Date.now() - new Date(patient.dob)) / 31557600000)}
-         </span>
+       {getPatientAge(patient) && (
+         <span>Age {getPatientAge(patient)}</span>
        )}
 
        {patient.sex && <span>{prettySex(patient.sex)}</span>}
@@ -164,10 +163,75 @@ export default function PatientDetail({
         </div>
 
         {baseline.voiceBaseline?.exists && (
+  <>
+    <button
+      className="btn-text"
+      style={{
+        padding: 0,
+        border: "none",
+        background: "transparent",
+      }}
+      onClick={() =>
+        setShowBaselineDetails(!showBaselineDetails)
+      }
+    >
+      Voice baseline: Available{" "}
+      {showBaselineDetails ? "▲" : "▼"}
+    </button>
+
+    {showBaselineDetails && (
+      <div
+        style={{
+          marginTop: 12,
+          paddingTop: 12,
+          borderTop: "1px solid #E5E7EB",
+        }}
+      >
+        <div className="muted">
+          <strong>Baseline established:</strong>{" "}
+          {formatDateTime(
+            baseline.voiceBaseline.latestBaselineAt
+          )}
+        </div>
+
+        <div className="muted">
+          <strong>Protocol:</strong>{" "}
+          {baseline.voiceBaseline.protocol ||
+            "voice-baseline-v2-en"}
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <strong>Tasks completed</strong>
+
           <div className="muted">
-            Voice baseline: Available
+            ✓ Standardized reading
           </div>
-        )}
+
+          <div className="muted">
+            ✓ Guided speech
+          </div>
+
+          <div className="muted">
+            ✓ Sustained vowel
+          </div>
+
+          <div className="muted">
+            ✓ Counting task
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 10,
+            fontWeight: 600,
+          }}
+        >
+          Ready for longitudinal comparison
+        </div>
+      </div>
+    )}
+  </>
+)}
       </>
     )}
   </div>
@@ -329,4 +393,15 @@ function formatDateTime(iso) {
     month: "short", day: "numeric",
     hour: "numeric", minute: "2-digit",
   });
+}
+function getPatientAge(patient) {
+  if (patient.age) return patient.age;
+
+  if (patient.dob) {
+    return Math.floor(
+      (Date.now() - new Date(patient.dob)) / 31557600000
+    );
+  }
+
+  return null;
 }
