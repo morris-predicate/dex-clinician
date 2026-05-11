@@ -31,10 +31,23 @@ export default function Roster({ clinicId, clinicianKey, onSelectPatient, onLogo
     return () => clearInterval(interval);
   }, [load]);
 
-  const filtered = patients.filter((p) =>
-    !search.trim() ||
-    (p.name || "").toLowerCase().includes(search.toLowerCase().trim())
-  );
+  const normalizedSearch = search.toLowerCase().trim();
+
+const filtered = patients.filter((p) => {
+  if (!normalizedSearch) return true;
+
+  return [
+    p.name,
+    p.patientId,
+    p.subjectUid,
+    p.sex,
+    p.status,
+  ]
+    .filter(Boolean)
+    .some((value) =>
+      String(value).toLowerCase().includes(normalizedSearch)
+    );
+});
 
   const withSessions = filtered.filter((p) => p.latestSessionId).length;
 
@@ -59,7 +72,7 @@ export default function Roster({ clinicId, clinicianKey, onSelectPatient, onLogo
         <input
           type="search"
           className="search-input"
-          placeholder="Search by name…"
+          placeholder="Search by name, patient ID, or subject ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -105,6 +118,7 @@ function PatientRow({ patient, onClick }) {
         <div className="patient-row-meta">
           {patient.dob && <>DOB {patient.dob}</>}
           {patient.sex && <> · {patient.sex}</>}
+          {patient.subjectUid && <> · Subject ID {patient.subjectUid}</>}
           {patient.status && <> · {patient.status}</>}
         </div>
       </div>
