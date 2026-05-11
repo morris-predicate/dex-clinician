@@ -103,12 +103,15 @@ export default function PatientDetail({
       {/* ── Patient header card ──────────────────────────────────────────── */}
       <div className="detail-header-card">
         <div className="detail-name">{patient.name || "Unnamed patient"}</div>
-        <div className="detail-meta">
-          {patient.dob && <span>DOB {patient.dob}</span>}
-          {patient.sex && <span>{prettySex(patient.sex)}</span>}
-          {patient.email && <span>{patient.email}</span>}
-          {patient.phone && <span>{patient.phone}</span>}
-        </div>
+             <div className="detail-meta">
+       {patient.dob && (
+         <span>
+           Age {Math.floor((Date.now() - new Date(patient.dob)) / 31557600000)}
+         </span>
+       )}
+
+       {patient.sex && <span>{prettySex(patient.sex)}</span>}
+     </div>
         <div className="detail-status">
           {patient.latestSessionAt ? (
             <>Last session: {formatDateTime(patient.latestSessionAt)}</>
