@@ -117,11 +117,15 @@ export default function PatientDetail({
       <div className="detail-header-card">
         <div className="detail-name">{patient.name || "Unnamed patient"}</div>
              <div className="detail-meta">
-       {getPatientAge(patient) && (
-         <span>Age {getPatientAge(patient)}</span>
-       )}
+      {getPatientAge(patient) && (
+        <span>Age {getPatientAge(patient)}</span>
+      )}
 
-       {patient.sex && <span>{prettySex(patient.sex)}</span>}
+      {patient.sex && <span>{prettySex(patient.sex)}</span>}
+
+      {patient.subjectUid && (
+        <span>Subject ID {patient.subjectUid}</span>
+      )}
      </div>
         <div className="detail-status">
           {patient.latestSessionAt ? (
