@@ -34,3 +34,6 @@ export const fetchPatient = ({ patientId, ...opts }) =>
 
 export const fetchTranscript = ({ patientId, ...opts }) =>
   request(`/api/clinician/patients/${encodeURIComponent(patientId)}/transcript`, opts);
+
+export const fetchPatientBaseline = ({ patientId, ...opts }) =>
+  request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, opts);

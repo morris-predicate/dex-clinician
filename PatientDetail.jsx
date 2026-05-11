@@ -1,6 +1,10 @@
 import React from "react";
 import { useEffect, useState } from "react";
-import { fetchPatient, fetchTranscript } from "./api.js";
+import {
+  fetchPatient,
+  fetchTranscript,
+  fetchPatientBaseline,
+} from "./api.js";
 
 // Same display order + labels as the patient PWA's done screen, for consistency.
 const DISPLAY_CATEGORIES = [
@@ -29,6 +33,7 @@ export default function PatientDetail({
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [baseline, setBaseline] = useState(null);
 
   // Transcript state: defaulted closed, loaded on demand.
   const [showTranscript, setShowTranscript] = useState(false);
@@ -39,8 +44,15 @@ export default function PatientDetail({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchPatient({ patientId, clinicianKey, clinicId })
-      .then((d) => { if (!cancelled) setData(d); })
+    Promise.all([
+  fetchPatient({ patientId, clinicianKey, clinicId }),
+  fetchPatientBaseline({ patientId, clinicianKey, clinicId }),
+])
+  .then(([patientData, baselineData]) => {
+    if (cancelled) return;
+    setData(patientData);
+    setBaseline(baselineData);
+  })
       .catch((err) => {
         if (cancelled) return;
         if (err.status === 401) onLogout();
@@ -120,8 +132,47 @@ export default function PatientDetail({
           )}
         </div>
       </div>
+     {/* ── Baseline status ───────────────────────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title">
+    Baseline Status
+  </div>
 
-      {/* ── What patient reported (filtered entities) ────────────────────── */}
+  <div className="detail-card">
+    {!baseline ? (
+      <div className="empty-state-small">
+        Loading baseline…
+      </div>
+    ) : (
+      <>
+        <div style={{ marginBottom: 8 }}>
+          <strong>Status:</strong>{" "}
+          {baseline.baselineStatus === "voice_baseline_ready"
+            ? "✓ Voice baseline ready"
+            : baseline.baselineStatus === "multimodal_baseline_ready"
+            ? "✓ Multimodal baseline ready"
+            : baseline.baselineStatus === "wearable_enabled"
+            ? "✓ Wearable connected"
+            : "Voice-only monitoring"}
+        </div>
+
+        <div className="muted">
+          Wearable:{" "}
+          {baseline.wearableConnected
+            ? "Connected"
+            : "Not connected"}
+        </div>
+
+        {baseline.voiceBaseline?.exists && (
+          <div className="muted">
+            Voice baseline: Available
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</section> 
+     {/* ── What patient reported (filtered entities) ────────────────────── */}
       <section className="detail-section">
         <div className="detail-section-title">What this patient reported</div>
 
@@ -158,8 +209,10 @@ export default function PatientDetail({
             <VitalsTable vitals={vitals} />
           ) : (
             <div className="empty-state-small">
-              No wearable data connected.
-              <span className="muted-inline"> (Validic integration pending)</span>
+              No wearable connected.
+              <span className="muted-inline">
+                {" "}Voice-only monitoring active
+              </span>
             </div>
           )}
         </div>
