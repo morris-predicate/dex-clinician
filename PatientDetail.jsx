@@ -247,12 +247,8 @@ async function handleToggleTranscript() {
         </div>
       </div>
 
-{/* ── Voice + Vitals Fusion ───────────────────────────────────── */}
+{/* ── Fusion clinical significance card ───────────────────────── */}
 <section className="detail-section">
-  <div className="detail-section-title">
-    Voice + Vitals Fusion
-  </div>
-
   <div className="detail-card">
     {fusionLoading ? (
       <div className="empty-state-small">
@@ -266,7 +262,7 @@ async function handleToggleTranscript() {
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <strong>So what this means:</strong>
+          <strong>Clinical Significance:</strong>
 
           <div
             style={{
