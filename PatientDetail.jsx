@@ -157,11 +157,9 @@ useEffect(() => {
 
   const fg = graphRef.current;
 
-  fg.d3Force("charge").strength(-550);
-  fg.d3Force("link").distance(180);
-  fg.d3Force("collision", d3.forceCollide(85));
-
-  fg.zoomToFit(400, 60);
+  fg.d3Force("charge").strength(-350);
+  fg.d3Force("link").distance(110);
+  fg.d3Force("collision", d3.forceCollide(55));
 }, [signalGraph]);
 
 async function loadFusionSummary() {
@@ -387,7 +385,7 @@ async function handleToggleTranscript() {
   width={820}
   height={480}
   dagMode="radialout"
-  dagLevelDistance={140}
+  dagLevelDistance={90}
   nodeLabel={(node) =>
     `${node.label}\n\n${node.clinicalContext || ""}`
   }
@@ -402,7 +400,7 @@ async function handleToggleTranscript() {
   linkDirectionalArrowLength={5}
   linkDirectionalArrowRelPos={1}
   linkCurvature={0.15}
-  cooldownTicks={300}
+  cooldownTicks={120}
   d3AlphaDecay={0.008}
   d3VelocityDecay={0.55}
 
