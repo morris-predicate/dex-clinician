@@ -32,9 +32,71 @@ function titleCase(value) {
 
 function formatPercent(value) {
   if (value === null || value === undefined) return "—";
+
   const n = Number(value);
+
   if (!Number.isFinite(n)) return "—";
+
   return `${n > 0 ? "+" : ""}${n}%`;
+}
+
+function getDeviationSummary(voiceDeviation) {
+  if (!voiceDeviation?.compared) {
+    return "Not enough prior voice feature data is available for comparison.";
+  }
+
+  const level = voiceDeviation.deviationLevel || "stable";
+
+  if (level === "stable") {
+    return "No meaningful voice changes from personal baseline.";
+  }
+
+  if (level === "mild") {
+    return "Mild voice changes detected compared with personal baseline.";
+  }
+
+  if (level === "moderate") {
+    return "Moderate voice changes detected compared with personal baseline.";
+  }
+
+  if (level === "significant") {
+    return "Significant voice changes detected compared with personal baseline.";
+  }
+
+  return "Voice pattern compared with personal baseline.";
+}
+
+function getFeatureInterpretation(feature) {
+  const direction = feature?.direction || "stable";
+  const severity = feature?.severity || "stable";
+
+  if (severity === "stable" || direction === "stable") {
+    return "No meaningful change from personal baseline.";
+  }
+
+  const directionText =
+    direction === "increased" ? "higher than" : "lower than";
+
+  const map = {
+    speechTempo: `Speaking tempo is ${directionText} personal baseline.`,
+    meanPauseDuration: `Pause duration is ${directionText} personal baseline.`,
+    pauseFrequency: `Pause frequency is ${directionText} personal baseline.`,
+    voiceEnergy: `Voice energy is ${directionText} personal baseline.`,
+    voiceExpressiveness: `Voice expressiveness is ${directionText} personal baseline.`,
+    breathSupport: `Breath support measure is ${directionText} personal baseline.`,
+    speechHesitations: `Speech hesitation pattern is ${directionText} personal baseline.`,
+  };
+
+  return map[feature?.metric] || "Changed compared with personal baseline.";
+}
+
+function getSeverityIcon(severity) {
+  return {
+    stable: "🟢",
+    mild: "🟡",
+    moderate: "🟠",
+    significant: "🔴",
+  }[severity] || "🟢";
 }
 
 export default function PatientDetail({
@@ -304,11 +366,16 @@ export default function PatientDetail({
     </div>
 
     <div className="muted" style={{ marginBottom: 8 }}>
-      Compared to personal baseline
-    </div>
+  {getDeviationSummary(voiceDeviation)}
+</div>
+
+<div className="muted" style={{ marginBottom: 8 }}>
+  Clinician context: review alongside reported symptoms and wearable data when available.
+</div>
 
     <div className="muted">
       <strong>Overall deviation:</strong>{" "}
+      {getSeverityIcon(voiceDeviation.deviationLevel)}{" "}
       {titleCase(voiceDeviation.deviationLevel)}
     </div>
 
@@ -320,26 +387,42 @@ export default function PatientDetail({
     </div>
 
     {voiceDeviation.features?.map((feature) => (
-      <div
-        key={feature.metric}
-        className="muted"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "6px 0",
-          borderTop: "1px solid #E5E7EB",
-          marginTop: 6,
-        }}
-      >
-        <span>{feature.label}</span>
+  <div
+    key={feature.metric}
+    className="muted"
+    style={{
+      padding: "8px 0",
+      borderTop: "1px solid #E5E7EB",
+      marginTop: 6,
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 12,
+      }}
+    >
+      <span>{feature.label}</span>
 
-        <span>
-          {titleCase(feature.severity)} ·{" "}
-          {titleCase(feature.direction)} ·{" "}
-          {formatPercent(feature.percentChange)}
-        </span>
-      </div>
-    ))}
+      <span>
+        {getSeverityIcon(feature.severity)}{" "}
+        {titleCase(feature.severity)} ·{" "}
+        {titleCase(feature.direction)} ·{" "}
+        {formatPercent(feature.percentChange)}
+      </span>
+    </div>
+
+    <div
+      style={{
+        marginTop: 3,
+        fontSize: 13,
+      }}
+    >
+      {getFeatureInterpretation(feature)}
+    </div>
+  </div>
+))}
   </div>
 )}
   </div>
