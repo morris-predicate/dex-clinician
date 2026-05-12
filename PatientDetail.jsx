@@ -115,6 +115,9 @@ export default function PatientDetail({
   const [fusionSummary, setFusionSummary] = useState(null);
   const [fusionLoading, setFusionLoading] = useState(false);
 
+  const [signalGraph, setSignalGraph] = useState(null);
+  const [signalGraphLoading, setSignalGraphLoading] = useState(false);
+
   const voiceDeviation =
     baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
   // Transcript state: defaulted closed, loaded on demand.
@@ -135,6 +138,7 @@ export default function PatientDetail({
   setBaseline(baselineData);
 
   loadFusionSummary();
+  loadSignalGraph();
 })
       .catch((err) => {
         if (cancelled) return;
@@ -173,7 +177,38 @@ async function loadFusionSummary() {
   } finally {
     setFusionLoading(false);
   }
-}  
+}
+
+async function loadSignalGraph() {
+  if (!patientId) return;
+
+  setSignalGraphLoading(true);
+
+  try {
+    const res = await fetch(
+      `https://dex-proxy-production.up.railway.app/api/fusion/${encodeURIComponent(patientId)}/graph`,
+      {
+        headers: {
+          "X-Clinician-Key": clinicianKey,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    if (data?.ok) {
+      setSignalGraph(data.graph);
+    } else {
+      setSignalGraph(null);
+    }
+  } catch (err) {
+    console.error("Signal graph failed:", err);
+    setSignalGraph(null);
+  } finally {
+    setSignalGraphLoading(false);
+  }
+}
+
 async function handleToggleTranscript() {
     if (showTranscript) {
       setShowTranscript(false);
@@ -301,6 +336,74 @@ async function handleToggleTranscript() {
     )}
   </div>
 </section>
+
+{/* ── Signal Intelligence Map ─────────────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title">
+    Signal Intelligence Map
+  </div>
+
+  <div className="detail-card">
+    {signalGraphLoading ? (
+      <div className="empty-state-small">
+        Loading signal map…
+      </div>
+    ) : signalGraph?.nodes?.length ? (
+      <>
+        <div className="muted" style={{ marginBottom: 12, lineHeight: 1.5 }}>
+          This map shows how patient-reported, voice, and physiologic signals
+          relate to the current clinical context.
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          {signalGraph.links.map((link, i) => {
+            const source = signalGraph.nodes.find((n) => n.id === link.source);
+            const target = signalGraph.nodes.find((n) => n.id === link.target);
+
+            return (
+              <div
+                key={`${link.source}-${link.target}-${i}`}
+                style={{
+                  padding: 12,
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 10,
+                  background: "#F9FAFB",
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                  {source?.label || link.source}
+                  {" → "}
+                  {target?.label || link.target}
+                </div>
+
+                <div className="muted">
+                  <strong>Relationship:</strong>{" "}
+                  {link.label || link.relationship}
+                </div>
+
+                {source?.clinicalContext && (
+                  <div className="muted" style={{ marginTop: 4 }}>
+                    <strong>Signal context:</strong>{" "}
+                    {source.clinicalContext}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="muted" style={{ marginTop: 12, fontSize: 12 }}>
+          {signalGraph.fdaSafeDisclaimer}
+        </div>
+      </>
+    ) : (
+      <div className="empty-state-small">
+        Signal intelligence map unavailable
+      </div>
+    )}
+  </div>
+</section>
+
 {/* ── Baseline status ───────────────────────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
