@@ -48,8 +48,8 @@ function getDeviationSummary(voiceDeviation) {
   const level = voiceDeviation.deviationLevel || "stable";
 
   if (level === "stable") {
-    return "No meaningful voice changes from personal baseline.";
-  }
+  return "Voice pattern appears stable relative to personal baseline. No meaningful deviation detected.";
+}
 
   if (level === "mild") {
     return "Mild voice changes detected compared with personal baseline.";
@@ -370,7 +370,7 @@ export default function PatientDetail({
 </div>
 
 <div className="muted" style={{ marginBottom: 8 }}>
-  Clinician context: review alongside reported symptoms and wearable data when available.
+  Voice-only monitoring active. Interpret alongside reported symptoms and physiologic signals when available.
 </div>
 
     <div className="muted">
@@ -407,20 +407,26 @@ export default function PatientDetail({
 
       <span>
         {getSeverityIcon(feature.severity)}{" "}
-        {titleCase(feature.severity)} ·{" "}
-        {titleCase(feature.direction)} ·{" "}
-        {formatPercent(feature.percentChange)}
+        {titleCase(feature.severity)}
+        {feature.direction !== "stable" && (
+  <>
+    {" "}· {titleCase(feature.direction)}
+  </>
+)}
+{" "}· {formatPercent(feature.percentChange)}
       </span>
     </div>
 
-    <div
-      style={{
-        marginTop: 3,
-        fontSize: 13,
-      }}
-    >
-      {getFeatureInterpretation(feature)}
-    </div>
+    {feature.severity !== "stable" && (
+  <div
+    style={{
+      marginTop: 3,
+      fontSize: 13,
+    }}
+  >
+    {getFeatureInterpretation(feature)}
+  </div>
+)}
   </div>
 ))}
   </div>
