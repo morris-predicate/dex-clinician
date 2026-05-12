@@ -366,77 +366,86 @@ async function handleToggleTranscript() {
   }}
 >
   <ForceGraph2D
-    graphData={{
-      nodes: signalGraph.nodes.map((node) => ({ ...node })),
-      links: signalGraph.links.map((link) => ({ ...link })),
-    }}
-    width={760}
-    height={360}
-    nodeLabel={(node) =>
-      `${node.label}\n\n${node.clinicalContext || ""}`
-    }
-    linkLabel={(link) =>
-      `Relationship: ${link.label || link.relationship}`
-    }
-    nodeAutoColorBy="group"
-    nodeRelSize={7}
-    linkDirectionalArrowLength={5}
-    linkDirectionalArrowRelPos={1}
-    linkCurvature={0.12}
-    cooldownTicks={80}
-    onNodeClick={(node) => setSelectedSignalNode(node)}
-    nodeCanvasObject={(node, ctx, globalScale) => {
-      const label = node.label;
-      const fontSize = 12 / globalScale;
-      ctx.font = `${fontSize}px Sans-Serif`;
+  graphData={{
+    nodes: signalGraph.nodes.map((node) => ({ ...node })),
+    links: signalGraph.links.map((link) => ({ ...link })),
+  }}
+  width={820}
+  height={480}
+  dagMode="radialout"
+  dagLevelDistance={140}
+  nodeLabel={(node) =>
+    `${node.label}\n\n${node.clinicalContext || ""}`
+  }
+  linkLabel={(link) =>
+    `Relationship: ${link.label || link.relationship}`
+  }
+  nodeAutoColorBy="group"
+  nodeRelSize={9}
+  nodeVal={(node) =>
+    node.group === "fusion" ? 18 : 10
+  }
+  linkDirectionalArrowLength={5}
+  linkDirectionalArrowRelPos={1}
+  linkCurvature={0.15}
+  cooldownTicks={150}
+  d3AlphaDecay={0.015}
+  d3VelocityDecay={0.45}
+  onNodeClick={(node) => setSelectedSignalNode(node)}
+  nodeCanvasObject={(node, ctx, globalScale) => {
+    const label = node.label;
+    const fontSize = 12 / globalScale;
+    ctx.font = `${fontSize}px Sans-Serif`;
 
-      const textWidth = ctx.measureText(label).width;
-      const padding = 6 / globalScale;
-      const radius = 8 / globalScale;
+    const textWidth = ctx.measureText(label).width;
+    const padding = 6 / globalScale;
+    const radius = 8 / globalScale;
 
-      ctx.fillStyle =
-        node.group === "fusion"
-          ? "#111827"
-          : node.group === "voice_signal"
-          ? "#EEF2FF"
-          : node.group === "vital_signal"
-          ? "#ECFDF5"
-          : "#FEF3C7";
+    ctx.fillStyle =
+      node.group === "fusion"
+        ? "#111827"
+        : node.group === "voice_signal"
+        ? "#EEF2FF"
+        : node.group === "vital_signal"
+        ? "#ECFDF5"
+        : "#FEF3C7";
 
-      ctx.strokeStyle =
-        node.group === "fusion"
-          ? "#111827"
-          : "#CBD5E1";
+    ctx.strokeStyle =
+      node.group === "fusion"
+        ? "#111827"
+        : "#CBD5E1";
 
-      ctx.lineWidth = 1 / globalScale;
+    ctx.lineWidth = 1 / globalScale;
 
-      const x = node.x - textWidth / 2 - padding;
-      const y = node.y - fontSize / 2 - padding;
-      const w = textWidth + padding * 2;
-      const h = fontSize + padding * 2;
+    const x = node.x - textWidth / 2 - padding;
+    const y = node.y - fontSize / 2 - padding;
+    const w = textWidth + padding * 2;
+    const h = fontSize + padding * 2;
 
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + w - radius, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-      ctx.lineTo(x + w, y + h - radius);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-      ctx.lineTo(x + radius, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
-      ctx.fillStyle =
-        node.group === "fusion" ? "#FFFFFF" : "#111827";
+    ctx.fillStyle =
+      node.group === "fusion"
+        ? "#FFFFFF"
+        : "#111827";
 
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, node.x, node.y);
-    }}
-  />
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, node.x, node.y);
+  }}
+/>
 </div>
 
 {selectedSignalNode && (
