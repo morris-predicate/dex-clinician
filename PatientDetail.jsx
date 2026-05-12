@@ -364,9 +364,23 @@ async function handleToggleTranscript() {
     ) : signalGraph?.nodes?.length ? (
       <>
         <div className="muted" style={{ marginBottom: 12, lineHeight: 1.5 }}>
-          This map shows how patient-reported, voice, and physiologic signals
-          relate to the current clinical context.
-        </div>
+  This map shows how patient-reported symptoms, voice features, and physiologic
+  signals relate to the current clinical context.
+</div>
+
+<div
+  style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  }}
+>
+  <span style={legendPill("#FEF3C7")}>Patient-reported</span>
+  <span style={legendPill("#EEF2FF")}>Voice signal</span>
+  <span style={legendPill("#ECFDF5")}>Physiologic signal</span>
+  <span style={legendPill("#111827", "#FFFFFF")}>Fusion context</span>
+</div>
 
 <div
   style={{
@@ -469,14 +483,30 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
   <div
     style={{
       marginTop: 12,
-      padding: 12,
+      padding: 14,
       border: "1px solid #E5E7EB",
-      borderRadius: 10,
+      borderRadius: 12,
       background: "#F9FAFB",
     }}
   >
-    <strong>{selectedSignalNode.label}</strong>
-    <div className="muted" style={{ marginTop: 4 }}>
+    <div
+      style={{
+        fontSize: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        color: "#64748B",
+        marginBottom: 6,
+        fontWeight: 700,
+      }}
+    >
+      Selected signal
+    </div>
+
+    <div style={{ fontWeight: 700, marginBottom: 6 }}>
+      {selectedSignalNode.label}
+    </div>
+
+    <div className="muted" style={{ lineHeight: 1.5 }}>
       {selectedSignalNode.clinicalContext}
     </div>
   </div>
@@ -871,6 +901,20 @@ function prettyVitalType(t) {
     body_temperature: "Body temp",
     respiratory_rate: "Resp rate",
   }[t] || t;
+}
+
+function legendPill(background, color = "#111827") {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "5px 10px",
+    borderRadius: 999,
+    background,
+    color,
+    fontSize: 12,
+    fontWeight: 600,
+    border: "1px solid #E5E7EB",
+  };
 }
 
 function formatDateTime(iso) {
