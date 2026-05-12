@@ -120,7 +120,11 @@ export default function PatientDetail({
   const [signalGraph, setSignalGraph] = useState(null);
   const [signalGraphLoading, setSignalGraphLoading] = useState(false);
   const [selectedSignalNode, setSelectedSignalNode] = useState(null);
-  const graphRef = useRef();
+
+  const [temporalTimeline, setTemporalTimeline] = useState(null);
+  const [temporalLoading, setTemporalLoading] = useState(false);
+
+const graphRef = useRef();
 
   const voiceDeviation =
     baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
@@ -143,6 +147,7 @@ export default function PatientDetail({
 
   loadFusionSummary();
   loadSignalGraph();
+  loadTemporalTimeline();
 })
       .catch((err) => {
         if (cancelled) return;
@@ -157,9 +162,10 @@ useEffect(() => {
 
   const fg = graphRef.current;
 
-  fg.d3Force("charge").strength(-350);
-  fg.d3Force("link").distance(110);
-  fg.d3Force("collision", d3.forceCollide(55));
+  requestAnimationFrame(() => {
+    fg.centerAt(0, 30, 0);
+    fg.zoom(0.92, 0);
+  });
 }, [signalGraph]);
 
 async function loadFusionSummary() {
@@ -210,8 +216,9 @@ async function loadSignalGraph() {
     const data = await res.json();
 
     if (data?.ok) {
-      setSignalGraph(data.graph);
-    } else {
+  console.log("GRAPH NODES", data.graph.nodes);
+  setSignalGraph(data.graph);
+} else {
       setSignalGraph(null);
     }
   } catch (err) {
@@ -219,6 +226,36 @@ async function loadSignalGraph() {
     setSignalGraph(null);
   } finally {
     setSignalGraphLoading(false);
+  }
+}
+
+async function loadTemporalTimeline() {
+  if (!patientId) return;
+
+  setTemporalLoading(true);
+
+  try {
+    const res = await fetch(
+      `https://dex-proxy-production.up.railway.app/api/fusion/${encodeURIComponent(patientId)}/timeline`,
+      {
+        headers: {
+          "X-Clinician-Key": clinicianKey,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    if (data?.ok) {
+      setTemporalTimeline(data.timeline);
+    } else {
+      setTemporalTimeline(null);
+    }
+  } catch (err) {
+    console.error("Temporal timeline failed:", err);
+    setTemporalTimeline(null);
+  } finally {
+    setTemporalLoading(false);
   }
 }
 
@@ -393,14 +430,16 @@ async function handleToggleTranscript() {
  <ForceGraph2D
   ref={graphRef}
   graphData={{
-    nodes: signalGraph.nodes.map((node) => ({ ...node })),
-    links: signalGraph.links.map((link) => ({ ...link })),
-  }}
+  nodes: signalGraph.nodes.map((node) => ({
+    ...node,
+    ...hubSpokePosition(node.id),
+  })),
+  links: signalGraph.links.map((link) => ({ ...link })),
+}}
   width={820}
-  height={480}
-  dagMode="radialout"
-  dagLevelDistance={90}
-  nodeLabel={(node) =>
+  height={540}
+  cooldownTicks={0}
+    nodeLabel={(node) =>
     `${node.label}\n\n${node.clinicalContext || ""}`
   }
   linkLabel={(link) =>
@@ -414,10 +453,7 @@ async function handleToggleTranscript() {
   linkDirectionalArrowLength={5}
   linkDirectionalArrowRelPos={1}
   linkCurvature={0.15}
-  cooldownTicks={120}
-  d3AlphaDecay={0.008}
-  d3VelocityDecay={0.55}
-
+ 
 enableZoomInteraction={false}
 enablePanInteraction={false}
 enableNodeDrag={false}
@@ -519,6 +555,114 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
     ) : (
       <div className="empty-state-small">
         Signal intelligence map unavailable
+      </div>
+    )}
+  </div>
+</section>
+
+{/* ── Temporal Signal Intelligence ───────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title">
+    Temporal Signal Intelligence
+  </div>
+
+  <div className="detail-card">
+    {temporalLoading ? (
+      <div className="empty-state-small">
+        Loading temporal signal timeline…
+      </div>
+    ) : temporalTimeline ? (
+      <>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 14,
+            borderRadius: 12,
+            background: "#F9FAFB",
+            border: "1px solid #E5E7EB",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>
+            {temporalTimeline.temporalSummary.label}
+          </div>
+
+          <div className="muted" style={{ marginBottom: 8 }}>
+            {temporalTimeline.temporalSummary.clinicalSignificance}
+          </div>
+
+          <div style={{ lineHeight: 1.5 }}>
+            <strong>So what changed?</strong>{" "}
+            {temporalTimeline.temporalSummary.soWhat}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: 12 }}>
+          {temporalTimeline.windows.map((window) => (
+            <div
+              key={window.id}
+              style={{
+                border: "1px solid #E5E7EB",
+                borderRadius: 12,
+                padding: 14,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <strong>{window.label}</strong>
+
+                <span className="muted">
+                  {formatDateTime(window.timestamp)}
+                </span>
+              </div>
+
+              <div className="muted" style={{ marginBottom: 10 }}>
+                {window.clinicalContext}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                {window.signals.map((signal) => (
+                  <span
+                    key={signal.id}
+                    style={legendPill(
+                      signal.modality === "voice"
+                        ? "#EEF2FF"
+                        : signal.modality === "vitals"
+                        ? "#ECFDF5"
+                        : "#FEF3C7"
+                    )}
+                  >
+                    {signal.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          className="muted"
+          style={{
+            marginTop: 12,
+            fontSize: 12,
+          }}
+        >
+          {temporalTimeline.fdaSafeDisclaimer}
+        </div>
+      </>
+    ) : (
+      <div className="empty-state-small">
+        Temporal signal timeline unavailable
       </div>
     )}
   </div>
@@ -901,6 +1045,54 @@ function prettyVitalType(t) {
     body_temperature: "Body temp",
     respiratory_rate: "Resp rate",
   }[t] || t;
+}
+
+function hubSpokePosition(id) {
+  const positions = {
+    fusion_context: {
+      x: 0,
+      y: 0,
+      fx: 0,
+      fy: 0,
+    },
+
+    patient_reported_fever: {
+      x: 0,
+      y: -175,
+      fx: 0,
+      fy: -175,
+    },
+
+    tachycardia: {
+      x: 210,
+      y: -20,
+      fx: 210,
+      fy: -20,
+    },
+
+    respiratory_rate: {
+      x: 170,
+      y: 120,
+      fx: 170,
+      fy: 120,
+    },
+
+    speech_tempo: {
+      x: -210,
+      y: -20,
+      fx: -210,
+      fy: -20,
+    },
+
+    pause_burden: {
+      x: -170,
+      y: 120,
+      fx: -170,
+      fy: 120,
+    },
+  };
+
+  return positions[id] || {};
 }
 
 function legendPill(background, color = "#111827") {
