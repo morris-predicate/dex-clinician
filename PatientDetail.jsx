@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect, useState } from "react";
+import ForceGraph2D from "react-force-graph-2d";
 import {
   fetchPatient,
   fetchTranscript,
@@ -117,6 +118,7 @@ export default function PatientDetail({
 
   const [signalGraph, setSignalGraph] = useState(null);
   const [signalGraphLoading, setSignalGraphLoading] = useState(false);
+  const [selectedSignalNode, setSelectedSignalNode] = useState(null);
 
   const voiceDeviation =
     baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
@@ -355,100 +357,104 @@ async function handleToggleTranscript() {
           relate to the current clinical context.
         </div>
 
-       <div
+<div
   style={{
-    position: "relative",
-    padding: "28px 12px",
     border: "1px solid #E5E7EB",
     borderRadius: 14,
-    background:
-      "linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%)",
+    background: "#FFFFFF",
     overflow: "hidden",
   }}
 >
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(3, 1fr)",
-      gap: 12,
-      marginBottom: 24,
+  <ForceGraph2D
+    graphData={{
+      nodes: signalGraph.nodes.map((node) => ({ ...node })),
+      links: signalGraph.links.map((link) => ({ ...link })),
     }}
-  >
-    {signalGraph.nodes
-      .filter((node) => node.id !== "fusion_context")
-      .map((node) => (
-        <div
-          key={node.id}
-          style={{
-            padding: 12,
-            border: "1px solid #D1D5DB",
-            borderRadius: 999,
-            textAlign: "center",
-            fontWeight: 600,
-            background: "#FFFFFF",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-            fontSize: 14,
-          }}
-          title={node.clinicalContext}
-        >
-          {node.label}
-        </div>
-      ))}
-  </div>
+    width={760}
+    height={360}
+    nodeLabel={(node) =>
+      `${node.label}\n\n${node.clinicalContext || ""}`
+    }
+    linkLabel={(link) =>
+      `Relationship: ${link.label || link.relationship}`
+    }
+    nodeAutoColorBy="group"
+    nodeRelSize={7}
+    linkDirectionalArrowLength={5}
+    linkDirectionalArrowRelPos={1}
+    linkCurvature={0.12}
+    cooldownTicks={80}
+    onNodeClick={(node) => setSelectedSignalNode(node)}
+    nodeCanvasObject={(node, ctx, globalScale) => {
+      const label = node.label;
+      const fontSize = 12 / globalScale;
+      ctx.font = `${fontSize}px Sans-Serif`;
 
-  <div
-    style={{
-      textAlign: "center",
-      fontSize: 24,
-      lineHeight: 1,
-      color: "#9CA3AF",
-      marginBottom: 18,
-    }}
-  >
-    ↓
-  </div>
+      const textWidth = ctx.measureText(label).width;
+      const padding = 6 / globalScale;
+      const radius = 8 / globalScale;
 
-  <div
-    style={{
-      maxWidth: 320,
-      margin: "0 auto",
-      padding: 16,
-      borderRadius: 16,
-      textAlign: "center",
-      fontWeight: 700,
-      background: "#111827",
-      color: "#FFFFFF",
-      boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-    }}
-  >
-    Clinical signal context
-  </div>
+      ctx.fillStyle =
+        node.group === "fusion"
+          ? "#111827"
+          : node.group === "voice_signal"
+          ? "#EEF2FF"
+          : node.group === "vital_signal"
+          ? "#ECFDF5"
+          : "#FEF3C7";
 
-  <div
-    style={{
-      marginTop: 18,
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 8,
-      justifyContent: "center",
+      ctx.strokeStyle =
+        node.group === "fusion"
+          ? "#111827"
+          : "#CBD5E1";
+
+      ctx.lineWidth = 1 / globalScale;
+
+      const x = node.x - textWidth / 2 - padding;
+      const y = node.y - fontSize / 2 - padding;
+      const w = textWidth + padding * 2;
+      const h = fontSize + padding * 2;
+
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle =
+        node.group === "fusion" ? "#FFFFFF" : "#111827";
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, node.x, node.y);
     }}
-  >
-    {signalGraph.links.map((link, i) => (
-      <span
-        key={`${link.source}-${link.target}-${i}`}
-        className="muted"
-        style={{
-          padding: "6px 10px",
-          borderRadius: 999,
-          background: "#F3F4F6",
-          fontSize: 12,
-        }}
-      >
-        {link.label || link.relationship}
-      </span>
-    ))}
-  </div>
+  />
 </div>
+
+{selectedSignalNode && (
+  <div
+    style={{
+      marginTop: 12,
+      padding: 12,
+      border: "1px solid #E5E7EB",
+      borderRadius: 10,
+      background: "#F9FAFB",
+    }}
+  >
+    <strong>{selectedSignalNode.label}</strong>
+    <div className="muted" style={{ marginTop: 4 }}>
+      {selectedSignalNode.clinicalContext}
+    </div>
+  </div>
+)}
 
         <div className="muted" style={{ marginTop: 12, fontSize: 12 }}>
           {signalGraph.fdaSafeDisclaimer}
