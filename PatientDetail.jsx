@@ -23,6 +23,20 @@ function classForCategory(c) {
   }[c] || "other";
 }
 
+function titleCase(value) {
+  if (!value) return "Stable";
+  return String(value)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined) return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return `${n > 0 ? "+" : ""}${n}%`;
+}
+
 export default function PatientDetail({
   patientId,
   clinicId,
@@ -36,6 +50,8 @@ export default function PatientDetail({
   const [baseline, setBaseline] = useState(null);
   const [showBaselineDetails, setShowBaselineDetails] = useState(false);
 
+  const voiceDeviation =
+    baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
   // Transcript state: defaulted closed, loaded on demand.
   const [showTranscript, setShowTranscript] = useState(false);
   const [transcript, setTranscript] = useState(null);
@@ -267,6 +283,65 @@ export default function PatientDetail({
     ? formatDateTime(baseline.voiceFeatures.latest.lastModified)
     : "Not available"}
 </div>
+
+{voiceDeviation && (
+  <div
+    style={{
+      marginTop: 16,
+      padding: 12,
+      border: "1px solid #E5E7EB",
+      borderRadius: 10,
+      background: "#F9FAFB",
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 700,
+        marginBottom: 4,
+      }}
+    >
+      Voice Deviation Intelligence
+    </div>
+
+    <div className="muted" style={{ marginBottom: 8 }}>
+      Compared to personal baseline
+    </div>
+
+    <div className="muted">
+      <strong>Overall deviation:</strong>{" "}
+      {titleCase(voiceDeviation.deviationLevel)}
+    </div>
+
+    <div className="muted">
+      <strong>Compared at:</strong>{" "}
+      {voiceDeviation.comparedAt
+        ? formatDateTime(voiceDeviation.comparedAt)
+        : "Not available"}
+    </div>
+
+    {voiceDeviation.features?.map((feature) => (
+      <div
+        key={feature.metric}
+        className="muted"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "6px 0",
+          borderTop: "1px solid #E5E7EB",
+          marginTop: 6,
+        }}
+      >
+        <span>{feature.label}</span>
+
+        <span>
+          {titleCase(feature.severity)} ·{" "}
+          {titleCase(feature.direction)} ·{" "}
+          {formatPercent(feature.percentChange)}
+        </span>
+      </div>
+    ))}
+  </div>
+)}
   </div>
 )}
       </div>
