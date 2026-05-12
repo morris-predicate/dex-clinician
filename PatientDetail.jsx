@@ -355,42 +355,100 @@ async function handleToggleTranscript() {
           relate to the current clinical context.
         </div>
 
-        <div style={{ display: "grid", gap: 10 }}>
-          {signalGraph.links.map((link, i) => {
-            const source = signalGraph.nodes.find((n) => n.id === link.source);
-            const target = signalGraph.nodes.find((n) => n.id === link.target);
-
-            return (
-              <div
-                key={`${link.source}-${link.target}-${i}`}
-                style={{
-                  padding: 12,
-                  border: "1px solid #E5E7EB",
-                  borderRadius: 10,
-                  background: "#F9FAFB",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                  {source?.label || link.source}
-                  {" → "}
-                  {target?.label || link.target}
-                </div>
-
-                <div className="muted">
-                  <strong>Relationship:</strong>{" "}
-                  {link.label || link.relationship}
-                </div>
-
-                {source?.clinicalContext && (
-                  <div className="muted" style={{ marginTop: 4 }}>
-                    <strong>Signal context:</strong>{" "}
-                    {source.clinicalContext}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+       <div
+  style={{
+    position: "relative",
+    padding: "28px 12px",
+    border: "1px solid #E5E7EB",
+    borderRadius: 14,
+    background:
+      "linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%)",
+    overflow: "hidden",
+  }}
+>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(3, 1fr)",
+      gap: 12,
+      marginBottom: 24,
+    }}
+  >
+    {signalGraph.nodes
+      .filter((node) => node.id !== "fusion_context")
+      .map((node) => (
+        <div
+          key={node.id}
+          style={{
+            padding: 12,
+            border: "1px solid #D1D5DB",
+            borderRadius: 999,
+            textAlign: "center",
+            fontWeight: 600,
+            background: "#FFFFFF",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            fontSize: 14,
+          }}
+          title={node.clinicalContext}
+        >
+          {node.label}
         </div>
+      ))}
+  </div>
+
+  <div
+    style={{
+      textAlign: "center",
+      fontSize: 24,
+      lineHeight: 1,
+      color: "#9CA3AF",
+      marginBottom: 18,
+    }}
+  >
+    ↓
+  </div>
+
+  <div
+    style={{
+      maxWidth: 320,
+      margin: "0 auto",
+      padding: 16,
+      borderRadius: 16,
+      textAlign: "center",
+      fontWeight: 700,
+      background: "#111827",
+      color: "#FFFFFF",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+    }}
+  >
+    Clinical signal context
+  </div>
+
+  <div
+    style={{
+      marginTop: 18,
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+      justifyContent: "center",
+    }}
+  >
+    {signalGraph.links.map((link, i) => (
+      <span
+        key={`${link.source}-${link.target}-${i}`}
+        className="muted"
+        style={{
+          padding: "6px 10px",
+          borderRadius: 999,
+          background: "#F3F4F6",
+          fontSize: 12,
+        }}
+      >
+        {link.label || link.relationship}
+      </span>
+    ))}
+  </div>
+</div>
 
         <div className="muted" style={{ marginTop: 12, fontSize: 12 }}>
           {signalGraph.fdaSafeDisclaimer}
