@@ -448,8 +448,8 @@ async function handleToggleTranscript() {
   nodeAutoColorBy="group"
   nodeRelSize={9}
   nodeVal={(node) =>
-    node.group === "fusion" ? 18 : 10
-  }
+  node.group === "fusion" ? 24 : 10
+}
   linkDirectionalArrowLength={5}
   linkDirectionalArrowRelPos={1}
   linkCurvature={0.15}
