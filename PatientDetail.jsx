@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useRef } from "react";
 import { useEffect, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
+import * as d3 from "d3-force";
 import {
   fetchPatient,
   fetchTranscript,
@@ -119,6 +120,7 @@ export default function PatientDetail({
   const [signalGraph, setSignalGraph] = useState(null);
   const [signalGraphLoading, setSignalGraphLoading] = useState(false);
   const [selectedSignalNode, setSelectedSignalNode] = useState(null);
+  const graphRef = useRef();
 
   const voiceDeviation =
     baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
@@ -150,6 +152,17 @@ export default function PatientDetail({
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [patientId, clinicId, clinicianKey, onLogout]);
+useEffect(() => {
+  if (!graphRef.current || !signalGraph) return;
+
+  const fg = graphRef.current;
+
+  fg.d3Force("charge").strength(-550);
+  fg.d3Force("link").distance(180);
+  fg.d3Force("collision", d3.forceCollide(85));
+
+  fg.zoomToFit(400, 60);
+}, [signalGraph]);
 
 async function loadFusionSummary() {
   if (!patientId) return;
@@ -365,7 +378,8 @@ async function handleToggleTranscript() {
     overflow: "hidden",
   }}
 >
-  <ForceGraph2D
+ <ForceGraph2D
+  ref={graphRef}
   graphData={{
     nodes: signalGraph.nodes.map((node) => ({ ...node })),
     links: signalGraph.links.map((link) => ({ ...link })),
@@ -388,10 +402,15 @@ async function handleToggleTranscript() {
   linkDirectionalArrowLength={5}
   linkDirectionalArrowRelPos={1}
   linkCurvature={0.15}
-  cooldownTicks={150}
-  d3AlphaDecay={0.015}
-  d3VelocityDecay={0.45}
-  onNodeClick={(node) => setSelectedSignalNode(node)}
+  cooldownTicks={300}
+  d3AlphaDecay={0.008}
+  d3VelocityDecay={0.55}
+
+enableZoomInteraction={false}
+enablePanInteraction={false}
+enableNodeDrag={false}
+
+onNodeClick={(node) => setSelectedSignalNode(node)}
   nodeCanvasObject={(node, ctx, globalScale) => {
     const label = node.label;
     const fontSize = 12 / globalScale;
