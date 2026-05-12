@@ -112,6 +112,9 @@ export default function PatientDetail({
   const [baseline, setBaseline] = useState(null);
   const [showBaselineDetails, setShowBaselineDetails] = useState(false);
 
+  const [fusionSummary, setFusionSummary] = useState(null);
+  const [fusionLoading, setFusionLoading] = useState(false);
+
   const voiceDeviation =
     baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
   // Transcript state: defaulted closed, loaded on demand.
@@ -130,6 +133,8 @@ export default function PatientDetail({
   .then(([patientData, baselineData]) => {
   setData(patientData);
   setBaseline(baselineData);
+
+  loadFusionSummary();
 })
       .catch((err) => {
         if (cancelled) return;
@@ -140,7 +145,36 @@ export default function PatientDetail({
     return () => { cancelled = true; };
   }, [patientId, clinicId, clinicianKey, onLogout]);
 
-  async function handleToggleTranscript() {
+async function loadFusionSummary() {
+  if (!patientId) return;
+
+  setFusionLoading(true);
+
+  try {
+    const res = await fetch(
+      `https://dex-proxy-production.up.railway.app/api/fusion/${encodeURIComponent(patientId)}/summary`,
+      {
+        headers: {
+          "X-Clinician-Key": clinicianKey,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    if (data?.ok) {
+      setFusionSummary(data);
+    } else {
+      setFusionSummary(null);
+    }
+  } catch (err) {
+    console.error("Fusion summary failed:", err);
+    setFusionSummary(null);
+  } finally {
+    setFusionLoading(false);
+  }
+}  
+async function handleToggleTranscript() {
     if (showTranscript) {
       setShowTranscript(false);
       return;
@@ -212,7 +246,66 @@ export default function PatientDetail({
           )}
         </div>
       </div>
-     {/* ── Baseline status ───────────────────────────────────────────── */}
+
+{/* ── Voice + Vitals Fusion ───────────────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title">
+    Voice + Vitals Fusion
+  </div>
+
+  <div className="detail-card">
+    {fusionLoading ? (
+      <div className="empty-state-small">
+        Loading fusion summary…
+      </div>
+    ) : fusionSummary?.fusionSummary ? (
+      <>
+        <div style={{ marginBottom: 12 }}>
+          <strong>Care Priority:</strong>{" "}
+          {fusionSummary.fusionSummary.priorityLabel}
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <strong>So what this means:</strong>
+
+          <div
+            style={{
+              marginTop: 6,
+              lineHeight: 1.5,
+            }}
+          >
+            {fusionSummary.fusionSummary.soWhat}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <strong>Signal Alignment:</strong>{" "}
+          {
+            fusionSummary.fusionSummary
+              .signalAlignment?.interpretation
+          }
+        </div>
+
+        <div
+          className="muted"
+          style={{
+            fontSize: 12,
+          }}
+        >
+          {
+            fusionSummary.fusionSummary
+              .fdaSafeDisclaimer
+          }
+        </div>
+      </>
+    ) : (
+      <div className="empty-state-small">
+        Fusion summary unavailable
+      </div>
+    )}
+  </div>
+</section>
+{/* ── Baseline status ───────────────────────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
     Baseline Status
