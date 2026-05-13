@@ -624,6 +624,58 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
   <strong>So what changed?</strong>{" "}
   {temporalTimeline.temporalSummary.soWhat}
 </div>
+
+{temporalTimeline.temporalSummary.confidenceLabel && (
+  <div
+    style={{
+      marginTop: 12,
+      paddingTop: 12,
+      borderTop: "1px solid #E5E7EB",
+    }}
+  >
+    <div style={{ marginBottom: 8 }}>
+      <span style={confidenceBadge(temporalTimeline.temporalSummary)}>
+        {temporalTimeline.temporalSummary.confidenceLabel}
+      </span>
+    </div>
+
+    <div className="muted" style={{ marginBottom: 8 }}>
+      {temporalTimeline.temporalSummary.confidenceContext}
+    </div>
+
+    <div style={{ display: "grid", gap: 6 }}>
+  {temporalTimeline.temporalSummary.confidenceDrivers
+    ?.filter((d) => d.type === "positive")
+    .map((driver) => (
+      <div
+        key={driver.label}
+        className="muted"
+        style={{
+          fontSize: 13,
+          color: "#166534",
+        }}
+      >
+        ✓ {driver.label}
+      </div>
+    ))}
+
+  {temporalTimeline.temporalSummary.confidenceDrivers
+    ?.filter((d) => d.type === "limitation")
+    .map((driver) => (
+      <div
+        key={driver.label}
+        className="muted"
+        style={{
+          fontSize: 13,
+          color: "#9A3412",
+        }}
+      >
+        ⚠ {driver.label}
+      </div>
+    ))}
+</div>
+  </div>
+)}
         </div>
 
         <div style={{ display: "grid", gap: 12 }}>
@@ -1202,9 +1254,41 @@ function agreementBadge(summary) {
   };
 }
 
+function confidenceBadge(summary) {
+  const confidence = summary?.confidenceLevel || "low";
+
+  const styles = {
+    low: {
+      background: "#F3F4F6",
+      color: "#334155",
+    },
+    moderate: {
+      background: "#ECFDF5",
+      color: "#166534",
+    },
+    high: {
+      background: "#DCFCE7",
+      color: "#166534",
+    },
+  };
+
+  const style = styles[confidence] || styles.low;
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "7px 11px",
+    borderRadius: 999,
+    background: style.background,
+    color: style.color,
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid #E5E7EB",
+  };
+}
+
 function velocityBadge(summary) {
   const velocity = summary?.velocityDirection || "stable";
-  const level = summary?.velocityLevel || "stable";
 
   const directionStyles = {
     stable: {
