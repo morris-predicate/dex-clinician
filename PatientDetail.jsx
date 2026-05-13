@@ -216,8 +216,7 @@ async function loadSignalGraph() {
     const data = await res.json();
 
     if (data?.ok) {
-  console.log("GRAPH NODES", data.graph.nodes);
-  setSignalGraph(data.graph);
+   setSignalGraph(data.graph);
 } else {
       setSignalGraph(null);
     }
@@ -1070,28 +1069,28 @@ function hubSpokePosition(id) {
       fy: -175,
     },
 
-    current_hr: {
+    tachycardia: {
       x: 210,
       y: -20,
       fx: 210,
       fy: -20,
     },
 
-    current_rr: {
+    respiratory_rate: {
       x: 170,
       y: 120,
       fx: 170,
       fy: 120,
     },
 
-    current_speech_tempo: {
+    speech_tempo: {
       x: -210,
       y: -20,
       fx: -210,
       fy: -20,
     },
 
-    current_pause_burden: {
+    pause_burden: {
       x: -170,
       y: 120,
       fx: -170,
@@ -1101,7 +1100,6 @@ function hubSpokePosition(id) {
 
   return positions[id] || {};
 }
-
 function signalShiftPill(signal) {
   const severity = signal?.severity || "stable";
 
