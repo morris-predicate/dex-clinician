@@ -632,19 +632,26 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
                 }}
               >
                 {window.signals.map((signal) => (
-                  <span
-                    key={signal.id}
-                    style={legendPill(
-                      signal.modality === "voice"
-                        ? "#EEF2FF"
-                        : signal.modality === "vitals"
-                        ? "#ECFDF5"
-                        : "#FEF3C7"
-                    )}
-                  >
-                    {signal.label}
-                  </span>
-                ))}
+  <span
+    key={signal.id}
+    style={signalShiftPill(signal)}
+    title={signal.interpretation}
+  >
+    {signal.label}
+    {signal.percentChange !== undefined && (
+      <>
+        {" "}
+        {signal.percentChange > 0 ? "↑" : "↓"}
+        {Math.abs(signal.percentChange)}%
+      </>
+    )}
+    {signal.severity && (
+      <>
+        {" "}· {titleCase(signal.severity)}
+      </>
+    )}
+  </span>
+))}
               </div>
             </div>
           ))}
@@ -1093,6 +1100,40 @@ function hubSpokePosition(id) {
   };
 
   return positions[id] || {};
+}
+
+function signalShiftPill(signal) {
+  const severity = signal?.severity || "stable";
+
+  const severityStyles = {
+    stable: { background: "#F3F4F6", color: "#111827" },
+    mild: { background: "#FEF3C7", color: "#92400E" },
+    moderate: { background: "#FFEDD5", color: "#9A3412" },
+    significant: { background: "#FEE2E2", color: "#991B1B" },
+  };
+
+  const fallbackByModality = {
+    voice: { background: "#EEF2FF", color: "#111827" },
+    vitals: { background: "#ECFDF5", color: "#111827" },
+    patient_reported: { background: "#FEF3C7", color: "#111827" },
+  };
+
+  const style =
+    signal?.severity
+      ? severityStyles[severity] || severityStyles.stable
+      : fallbackByModality[signal?.modality] || severityStyles.stable;
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: style.background,
+    color: style.color,
+    fontSize: 12,
+    fontWeight: 700,
+    border: "1px solid #E5E7EB",
+  };
 }
 
 function legendPill(background, color = "#111827") {
