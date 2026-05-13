@@ -598,12 +598,27 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
     {temporalTimeline.temporalSummary.agreementLabel ||
       "Signal agreement available"}
   </span>
+{temporalTimeline.temporalSummary.velocityLabel && (
+  <span style={velocityBadge(temporalTimeline.temporalSummary)}>
+    {temporalTimeline.temporalSummary.velocityLabel}
+{" "}·{" "}
+{titleCase(
+  temporalTimeline.temporalSummary.velocityLevel
+)}
+  </span>
+)}
 </div>
 
 <div className="muted" style={{ marginBottom: 8 }}>
   {temporalTimeline.temporalSummary.trajectoryContext ||
     temporalTimeline.temporalSummary.clinicalSignificance}
 </div>
+
+{temporalTimeline.temporalSummary.velocityContext && (
+  <div className="muted" style={{ marginBottom: 8 }}>
+    {temporalTimeline.temporalSummary.velocityContext}
+  </div>
+)}
 
 <div style={{ lineHeight: 1.5 }}>
   <strong>So what changed?</strong>{" "}
@@ -1173,6 +1188,46 @@ function agreementBadge(summary) {
   };
 
   const style = styles[agreement] || styles.low;
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "7px 11px",
+    borderRadius: 999,
+    background: style.background,
+    color: style.color,
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid #E5E7EB",
+  };
+}
+
+function velocityBadge(summary) {
+  const velocity = summary?.velocityDirection || "stable";
+  const level = summary?.velocityLevel || "stable";
+
+  const directionStyles = {
+    stable: {
+      background: "#F3F4F6",
+      color: "#334155",
+    },
+    increasing: {
+      background: "#FCE7F3",
+      color: "#9D174D",
+    },
+    decreasing: {
+      background: "#DCFCE7",
+      color: "#166534",
+    },
+    accelerating: {
+      background: "#FEE2E2",
+      color: "#991B1B",
+    },
+  };
+
+  const style =
+    directionStyles[velocity] ||
+    directionStyles.stable;
 
   return {
     display: "inline-flex",
