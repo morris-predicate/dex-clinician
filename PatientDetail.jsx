@@ -420,6 +420,20 @@ async function handleToggleTranscript() {
 
 <div
   style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  }}
+>
+  <span style={legendPill("#FEF3C7")}>Patient-reported</span>
+  <span style={legendPill("#EEF2FF")}>Voice signal</span>
+  <span style={legendPill("#ECFDF5")}>Physiologic signal</span>
+  <span style={legendPill("#111827", "#FFFFFF")}>Fusion context</span>
+</div>
+
+<div
+  style={{
     border: "1px solid #E5E7EB",
     borderRadius: 14,
     background: "#FFFFFF",
@@ -581,18 +595,34 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
             border: "1px solid #E5E7EB",
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>
-            {temporalTimeline.temporalSummary.label}
-          </div>
+          <div
+  style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  }}
+>
+  <span style={trajectoryBadge(temporalTimeline.temporalSummary)}>
+    {temporalTimeline.temporalSummary.trajectoryLabel ||
+      temporalTimeline.temporalSummary.label}
+  </span>
 
-          <div className="muted" style={{ marginBottom: 8 }}>
-            {temporalTimeline.temporalSummary.clinicalSignificance}
-          </div>
+  <span style={agreementBadge(temporalTimeline.temporalSummary)}>
+    {temporalTimeline.temporalSummary.agreementLabel ||
+      "Signal agreement available"}
+  </span>
+</div>
 
-          <div style={{ lineHeight: 1.5 }}>
-            <strong>So what changed?</strong>{" "}
-            {temporalTimeline.temporalSummary.soWhat}
-          </div>
+<div className="muted" style={{ marginBottom: 8 }}>
+  {temporalTimeline.temporalSummary.trajectoryContext ||
+    temporalTimeline.temporalSummary.clinicalSignificance}
+</div>
+
+<div style={{ lineHeight: 1.5 }}>
+  <strong>So what changed?</strong>{" "}
+  {temporalTimeline.temporalSummary.soWhat}
+</div>
         </div>
 
         <div style={{ display: "grid", gap: 12 }}>
@@ -1100,6 +1130,77 @@ function hubSpokePosition(id) {
 
   return positions[id] || {};
 }
+
+function trajectoryBadge(summary) {
+  const direction = summary?.trajectoryDirection || "stable";
+
+  const styles = {
+    stable: {
+      background: "#F3F4F6",
+      color: "#111827",
+    },
+    improving: {
+      background: "#DBEAFE",
+      color: "#1D4ED8",
+    },
+    worsening: {
+      background: "#FED7AA",
+      color: "#9A3412",
+    },
+    accelerating: {
+      background: "#FEE2E2",
+      color: "#991B1B",
+    },
+  };
+
+  const style = styles[direction] || styles.stable;
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "7px 11px",
+    borderRadius: 999,
+    background: style.background,
+    color: style.color,
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid #E5E7EB",
+  };
+}
+
+function agreementBadge(summary) {
+  const agreement = summary?.agreementLevel || "low";
+
+  const styles = {
+    low: {
+      background: "#F3F4F6",
+      color: "#334155",
+    },
+    moderate: {
+      background: "#EEF2FF",
+      color: "#3730A3",
+    },
+    high: {
+      background: "#DCFCE7",
+      color: "#166534",
+    },
+  };
+
+  const style = styles[agreement] || styles.low;
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "7px 11px",
+    borderRadius: 999,
+    background: style.background,
+    color: style.color,
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid #E5E7EB",
+  };
+}
+
 function signalShiftPill(signal) {
   const severity = signal?.severity || "stable";
 
