@@ -1070,28 +1070,28 @@ function hubSpokePosition(id) {
       fy: -175,
     },
 
-    tachycardia: {
+    current_hr: {
       x: 210,
       y: -20,
       fx: 210,
       fy: -20,
     },
 
-    respiratory_rate: {
+    current_rr: {
       x: 170,
       y: 120,
       fx: 170,
       fy: 120,
     },
 
-    speech_tempo: {
+    current_speech_tempo: {
       x: -210,
       y: -20,
       fx: -210,
       fy: -20,
     },
 
-    pause_burden: {
+    current_pause_burden: {
       x: -170,
       y: 120,
       fx: -170,
@@ -1107,8 +1107,14 @@ function signalShiftPill(signal) {
 
   const severityStyles = {
     stable: { background: "#F3F4F6", color: "#111827" },
-    mild: { background: "#FEF3C7", color: "#92400E" },
-    moderate: { background: "#FFEDD5", color: "#9A3412" },
+    mild: {
+  background: "#FEF9C3",
+  color: "#854D0E"
+},
+moderate: {
+  background: "#FED7AA",
+  color: "#9A3412"
+},
     significant: { background: "#FEE2E2", color: "#991B1B" },
   };
 
