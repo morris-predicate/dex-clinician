@@ -420,20 +420,6 @@ async function handleToggleTranscript() {
 
 <div
   style={{
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 14,
-  }}
->
-  <span style={legendPill("#FEF3C7")}>Patient-reported</span>
-  <span style={legendPill("#EEF2FF")}>Voice signal</span>
-  <span style={legendPill("#ECFDF5")}>Physiologic signal</span>
-  <span style={legendPill("#111827", "#FFFFFF")}>Fusion context</span>
-</div>
-
-<div
-  style={{
     border: "1px solid #E5E7EB",
     borderRadius: 14,
     background: "#FFFFFF",
@@ -576,7 +562,7 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
 {/* ── Temporal Signal Intelligence ───────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
-    Temporal Signal Intelligence
+    Temporal Signal Trajectory
   </div>
 
   <div className="detail-card">
