@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import ForceGraph2D from "react-force-graph-2d";
-import * as d3 from "d3-force";
 import {
   fetchPatient,
   fetchTranscript,
@@ -188,10 +187,14 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
     {
       time: now - windowMs * 0.58,
       label: "Voice capture event",
+      symptoms: ["Reported fever"],
+      voiceSignals: ["Reduced speech tempo", "Increased pause burden"],
     },
     {
       time: now - windowMs * 0.32,
       label: "Voice capture event",
+      symptoms: ["Reported fever"],
+      voiceSignals: ["Reduced speech tempo", "Increased pause burden"],
     },
   ];
 }, [now, windowMs]);
@@ -277,17 +280,124 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
       },
     ],
     tooltip: {
-      backgroundColor: "#1E293B",
-      borderColor: "#334155",
-      style: { color: "#F8FAFC" },
-      xDateFormat: "%H:%M",
-      shared: true,
-    },
+  backgroundColor: "#1E293B",
+  borderColor: "#334155",
+  style: { color: "#F8FAFC" },
+  xDateFormat: "%H:%M",
+  shared: false,
+
+  positioner: function (labelWidth, labelHeight, point) {
+    return {
+      x: Math.min(
+        point.plotX + 180,
+        this.chart.chartWidth - labelWidth - 20
+      ),
+      y: Math.max(point.plotY - 80, 20),
+    };
+  },
+},
     plotOptions: {
       spline: { marker: { enabled: true, radius: 4 } },
     },
-    series: mainSeries,
-  }), [mainSeries, voiceCaptureEvents]);
+    series: [
+  ...mainSeries,
+  {
+    name: "Voice capture event",
+    type: "scatter",
+    data: voiceCaptureEvents.map((event) => ({
+      x: event.time,
+      y: 8,
+      label: event.label,
+      symptoms: event.symptoms,
+      voiceSignals: event.voiceSignals,
+    })),
+    yAxis: 0,
+    color: "#22C55E",
+    marker: {
+      enabled: true,
+      radius: 6,
+      symbol: "circle",
+      lineWidth: 2,
+      lineColor: "#0F172A",
+    },
+tooltip: {
+  headerFormat: "",
+  useHTML: true,
+
+  pointFormatter: function () {
+    const eventTime = Highcharts.dateFormat(
+      "%l:%M %p",
+      this.x
+    );
+
+    const symptoms = this.symptoms?.length
+      ? this.symptoms
+      : ["None recorded"];
+
+    const voiceSignals = this.voiceSignals?.length
+      ? this.voiceSignals
+      : ["Not available"];
+
+    return `
+      <div style="
+        width:260px;
+        min-width:260px;
+        max-width:260px;
+        white-space:normal;
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        line-height:1.45;
+      ">
+
+        <div style="
+          font-weight:700;
+          font-size:14px;
+          color:#F8FAFC;
+        ">
+          Patient Symptom Report
+          <span style="
+            color:#94A3B8;
+            font-weight:500;
+            margin-left:8px;
+          ">
+            ${eventTime}
+          </span>
+        </div>
+
+        <div>
+          <div style="
+            color:#94A3B8;
+            font-size:12px;
+            font-weight:700;
+            margin-bottom:4px;
+          ">
+            Patient Reported Symptom(s):
+          </div>
+
+          ${symptoms.map(s => `<div>${s}</div>`).join("")}
+        </div>
+
+        <div>
+          <div style="
+            color:#94A3B8;
+            font-size:12px;
+            font-weight:700;
+            margin-bottom:4px;
+          ">
+            Voice Signal Context:
+          </div>
+
+          ${voiceSignals.map(s => `<div>${s}</div>`).join("")}
+        </div>
+
+      </div>
+    `;
+  },
+},
+}, // closes scatter series
+], // closes series array
+}), [mainSeries, voiceCaptureEvents]);
 
   const vdiChartOptions = useMemo(() => ({
     chart: {
