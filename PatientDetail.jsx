@@ -156,7 +156,7 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
           yAxis: param.yAxis,
           type: "spline",
           lineWidth: 2,
-          dashStyle: isDemo ? "Dash" : "Solid",
+          dashStyle: "Solid",
           marker: { enabled: true, radius: 4, symbol: "circle" },
         };
       });
@@ -533,6 +533,10 @@ export default function PatientDetail({
   const [error, setError] = useState(null);
   const [baseline, setBaseline] = useState(null);
   const [showBaselineDetails, setShowBaselineDetails] = useState(false);
+  const [showBaselineStatus, setShowBaselineStatus] = useState(false);
+
+  const [showTemporalTrajectory, setShowTemporalTrajectory] = useState(false);
+  const [showReportedDetails, setShowReportedDetails] = useState(false);
 
   const [fusionSummary, setFusionSummary] = useState(null);
   const [fusionLoading, setFusionLoading] = useState(false);
@@ -721,6 +725,11 @@ async function handleToggleTranscript() {
     items: entities.filter((e) => e.category === key),
   })).filter((b) => b.items.length > 0);
 
+const currentReviewWindow =
+  temporalTimeline?.windows?.find(
+    (window) => window.id === "current_window"
+  ) || null;
+
   return (
     <div className="page">
       <header className="page-header">
@@ -753,7 +762,14 @@ async function handleToggleTranscript() {
 
 {/* ── Fusion clinical significance card ───────────────────────── */}
 <section className="detail-section">
-  <div className="detail-card">
+  <div
+  className="detail-card"
+  style={{
+    border: "2px solid #FED7AA",
+    background: "#FFF7ED",
+    boxShadow: "0 8px 24px rgba(154, 52, 18, 0.08)",
+  }}
+>
     {fusionLoading ? (
       <div className="empty-state-small">
         Loading fusion summary…
@@ -816,6 +832,72 @@ async function handleToggleTranscript() {
     voiceDeviation={voiceDeviation}
     baseline={baseline}
   />
+</section>
+
+{/* ── Current Review Window ───────────────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title">
+    Current Review Window
+  </div>
+
+  <div
+    className="detail-card"
+    style={{
+      border: "1px solid #FED7AA",
+      background: "#FFFBEB",
+    }}
+  >
+    {temporalLoading ? (
+      <div className="empty-state-small">
+        Loading current review window…
+      </div>
+    ) : currentReviewWindow?.signals?.length ? (
+      <>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          {currentReviewWindow.clinicalContext}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+        >
+          {currentReviewWindow.signals.map((signal) => (
+            <span
+              key={signal.id}
+              style={signalShiftPill(signal)}
+              title={signal.interpretation}
+            >
+              {signal.label}
+
+              {signal.percentChange !== undefined && (
+                <>
+                  {" "}
+                  {signal.percentChange > 0 ? "↑" : "↓"}
+                  {Math.abs(signal.percentChange)}%
+                </>
+              )}
+
+              {signal.severity && (
+                <>
+                  {" "}·{" "}
+                  {signal.severity === "new"
+                    ? "New finding"
+                    : titleCase(signal.severity)}
+                </>
+              )}
+            </span>
+          ))}
+        </div>
+      </>
+    ) : (
+      <div className="empty-state-small">
+        Current review window unavailable
+      </div>
+    )}
+  </div>
 </section>
 
 {/* ── Signal Intelligence Map ─────────────────────────────────── */}
@@ -993,10 +1075,21 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
 
 {/* ── Temporal Signal Intelligence ───────────────────────────── */}
 <section className="detail-section">
+  <div className="detail-section-title-row">
   <div className="detail-section-title">
     Temporal Signal Trajectory
   </div>
 
+  <button
+    className="btn-secondary-small"
+    onClick={() => setShowTemporalTrajectory(!showTemporalTrajectory)}
+    type="button"
+  >
+    {showTemporalTrajectory ? "Hide" : "Show"}
+  </button>
+</div>
+
+  {showTemporalTrajectory && (
   <div className="detail-card">
     {temporalLoading ? (
       <div className="empty-state-small">
@@ -1033,7 +1126,7 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
 {temporalTimeline.temporalSummary.velocityLabel && (
   <span style={velocityBadge(temporalTimeline.temporalSummary)}>
     {temporalTimeline.temporalSummary.velocityLabel}
-{" "}·{" "}
+{" "} -{" "}
 {titleCase(
   temporalTimeline.temporalSummary.velocityLevel
 )}
@@ -1106,6 +1199,62 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
       </div>
     ))}
 </div>
+  </div>
+)}
+
+{temporalTimeline.temporalSummary.topContributingSignals?.length > 0 && (
+  <div
+    style={{
+      marginTop: 12,
+      paddingTop: 12,
+      borderTop: "1px solid #E5E7EB",
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 700,
+        marginBottom: 8,
+      }}
+    >
+      Top Contributing Signals
+    </div>
+
+    <div style={{ display: "grid", gap: 8 }}>
+      {temporalTimeline.temporalSummary.topContributingSignals.map(
+        (signal, index) => (
+          <div
+            key={`${signal.label}-${index}`}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "8px 10px",
+              borderRadius: 10,
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+            }}
+          >
+            <div style={{ fontWeight: 600 }}>
+              {index + 1}. {signal.label}
+            </div>
+
+            <div className="muted" style={{ fontSize: 13 }}>
+              {signal.percentChange !== undefined && (
+                <>
+                  {signal.percentChange > 0 ? "↑" : "↓"}
+                  {Math.abs(signal.percentChange)}%
+                  {" "}
+                </>
+              )}
+              {signal.severity &&
+  (signal.severity === "new"
+    ? "New finding"
+    : titleCase(signal.severity))}
+            </div>
+          </div>
+        )
+      )}
+    </div>
   </div>
 )}
         </div>
@@ -1187,14 +1336,45 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
       </div>
     )}
   </div>
+)}
 </section>
+
+{/* ── Vitals (placeholder until Validic is live) ───────────────────── */}
+      <section className="detail-section">
+        <div className="detail-section-title">Vitals</div>
+        <div className="detail-card">
+          {vitals && vitals.length > 0 ? (
+            <VitalsTable vitals={vitals} />
+          ) : (
+            <div className="empty-state-small">
+              No wearable connected.
+              <span className="muted-inline">
+                {" "}Voice-only monitoring active
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
 
 {/* ── Baseline status ───────────────────────────────────────────── */}
 <section className="detail-section">
+  <div className="detail-section-title-row">
   <div className="detail-section-title">
     Baseline Status
   </div>
 
+  <button
+    className="btn-secondary-small"
+    onClick={() =>
+      setShowBaselineStatus(!showBaselineStatus)
+    }
+    type="button"
+  >
+    {showBaselineStatus ? "Hide" : "Show"}
+  </button>
+</div>
+
+  {showBaselineStatus && (
   <div className="detail-card">
     {!baseline ? (
       <div className="empty-state-small">
@@ -1416,53 +1596,50 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
 )}
       </>
     )}
-  </div>
-</section> 
+ </div>
+)}
+</section>
      {/* ── What patient reported (filtered entities) ────────────────────── */}
-      <section className="detail-section">
-        <div className="detail-section-title">What this patient reported</div>
+<section className="detail-section">
+  <div className="detail-section-title-row">
+    <div className="detail-section-title">What the Patient Reported</div>
 
-        {buckets.length === 0 ? (
-          <div className="empty-state-small">
-            No clinical entities extracted from the most recent session.
-          </div>
-        ) : (
-          <div className="detail-card">
-            {buckets.map(({ key, label, items }) => (
-              <div key={key} className="detail-bucket">
-                <div className="detail-bucket-label">{label}</div>
-                <div className="detail-bucket-tags">
-                  {items.map((e, i) => (
-                    <span
-                      key={i}
-                      className={`entity-tag entity-${classForCategory(key)}`}
-                    >
-                      {e.text}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+    <button
+      className="btn-secondary-small"
+      onClick={() => setShowReportedDetails(!showReportedDetails)}
+      type="button"
+    >
+      {showReportedDetails ? "Hide" : "Show"}
+    </button>
+  </div>
 
-      {/* ── Vitals (placeholder until Validic is live) ───────────────────── */}
-      <section className="detail-section">
-        <div className="detail-section-title">Vitals</div>
-        <div className="detail-card">
-          {vitals && vitals.length > 0 ? (
-            <VitalsTable vitals={vitals} />
-          ) : (
-            <div className="empty-state-small">
-              No wearable connected.
-              <span className="muted-inline">
-                {" "}Voice-only monitoring active
-              </span>
+  {showReportedDetails &&
+    (buckets.length === 0 ? (
+      <div className="empty-state-small">
+        No clinical entities extracted from the most recent session.
+      </div>
+    ) : (
+      <div className="detail-card">
+        {buckets.map(({ key, label, items }) => (
+          <div key={key} className="detail-bucket">
+            <div className="detail-bucket-label">{label}</div>
+            <div className="detail-bucket-tags">
+              {items.map((e, i) => (
+                <span
+                  key={i}
+                  className={`entity-tag entity-${classForCategory(key)}`}
+                >
+                  {e.text}
+                </span>
+              ))}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        ))}
+      </div>
+    ))}
+</section>
+
+      
 
       {/* ── Transcript toggle ─────────────────────────────────────────────── */}
       <section className="detail-section">
@@ -1475,10 +1652,10 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
               disabled={transcriptLoading}
             >
               {transcriptLoading
-                ? "Loading…"
-                : showTranscript
-                ? "Hide"
-                : "Show transcript"}
+  ? "Loading…"
+  : showTranscript
+  ? "Hide"
+  : "Show"}
             </button>
           )}
         </div>
