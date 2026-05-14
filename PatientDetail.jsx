@@ -183,6 +183,18 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
   }, [voiceDeviation, hasVdiData]);
 
   // Highcharts options ────────────────────────────────────────────────────────
+  const voiceCaptureEvents = useMemo(() => {
+  return [
+    {
+      time: now - windowMs * 0.58,
+      label: "Voice capture event",
+    },
+    {
+      time: now - windowMs * 0.32,
+      label: "Voice capture event",
+    },
+  ];
+}, [now, windowMs]);
   const mainChartOptions = useMemo(() => ({
     chart: {
       type: "spline",
@@ -201,12 +213,54 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
       itemHoverStyle: { color: "#FFFFFF" },
     },
     xAxis: {
-      type: "datetime",
-      gridLineColor: "#1E293B",
-      lineColor: "#334155",
-      tickColor: "#334155",
-      labels: { style: { color: "#64748B", fontSize: "11px" }, format: "{value:%H:%M}" },
-    },
+  type: "datetime",
+  gridLineColor: "#1E293B",
+  lineColor: "#334155",
+  tickColor: "#334155",
+  labels: {
+    style: { color: "#64748B", fontSize: "11px" },
+    format: "{value:%H:%M}",
+  },
+ plotLines: voiceCaptureEvents.map((event) => ({
+  value: event.time,
+  color: "#22C55E",
+  width: 1,
+  dashStyle: "ShortDash",
+  zIndex: 10,
+
+  label: {
+    useHTML: true,
+    text: `
+      <div style="
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:4px;
+      ">
+        <div style="
+          width:10px;
+          height:10px;
+          border-radius:999px;
+          background:#22C55E;
+          border:2px solid #0F172A;
+          box-shadow:0 0 0 2px rgba(34,197,94,.25);
+        "></div>
+
+        <div style="
+          color:#22C55E;
+          font-size:10px;
+          font-weight:600;
+          white-space:nowrap;
+        ">
+          Voice capture
+        </div>
+      </div>
+    `,
+    rotation: 0,
+    y: 18,
+  },
+})),
+},
     yAxis: [
       {
         title: { text: "HR / RR", style: { color: "#64748B", fontSize: "11px" } },
@@ -233,7 +287,7 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
       spline: { marker: { enabled: true, radius: 4 } },
     },
     series: mainSeries,
-  }), [mainSeries]);
+  }), [mainSeries, voiceCaptureEvents]);
 
   const vdiChartOptions = useMemo(() => ({
     chart: {
@@ -765,10 +819,10 @@ const currentReviewWindow =
   <div
   className="detail-card"
   style={{
-    border: "2px solid #FED7AA",
-    background: "#FFF7ED",
-    boxShadow: "0 8px 24px rgba(154, 52, 18, 0.08)",
-  }}
+  border: "2px solid #BFDBFE",
+  background: "#F0F7FF",
+  boxShadow: "0 8px 24px rgba(37, 99, 235, 0.08)",
+}}
 >
     {fusionLoading ? (
       <div className="empty-state-small">
@@ -843,9 +897,9 @@ const currentReviewWindow =
   <div
     className="detail-card"
     style={{
-      border: "1px solid #FED7AA",
-      background: "#FFFBEB",
-    }}
+  border: "1px solid #BFDBFE",
+  background: "#F0F7FF",
+}}
   >
     {temporalLoading ? (
       <div className="empty-state-small">
