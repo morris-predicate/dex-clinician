@@ -339,60 +339,21 @@ tooltip: {
       : ["Not available"];
 
     return `
-      <div style="
-        width:260px;
-        min-width:260px;
-        max-width:260px;
-        white-space:normal;
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-        line-height:1.45;
-      ">
-
-        <div style="
-          font-weight:700;
-          font-size:14px;
-          color:#F8FAFC;
-        ">
-          Patient Symptom Report
-          <span style="
-            color:#94A3B8;
-            font-weight:500;
-            margin-left:8px;
-          ">
-            ${eventTime}
-          </span>
-        </div>
-
-        <div>
-          <div style="
-            color:#94A3B8;
-            font-size:12px;
-            font-weight:700;
-            margin-bottom:4px;
-          ">
-            Patient Reported Symptom(s):
-          </div>
-
-          ${symptoms.map(s => `<div>${s}</div>`).join("")}
-        </div>
-
-        <div>
-          <div style="
-            color:#94A3B8;
-            font-size:12px;
-            font-weight:700;
-            margin-bottom:4px;
-          ">
-            Voice Signal Context:
-          </div>
-
-          ${voiceSignals.map(s => `<div>${s}</div>`).join("")}
-        </div>
-
-      </div>
-    `;
+  <b>Patient Symptom Report</b>
+  <span style="color:#94A3B8;font-weight:500;"> ${eventTime}</span>
+  <br/><br/>
+  <span style="color:#94A3B8;font-size:12px;font-weight:700;">
+    Patient Reported Symptom(s):
+  </span>
+  <br/>
+  ${symptoms.map((s) => `• ${s}`).join("<br/>")}
+  <br/><br/>
+  <span style="color:#94A3B8;font-size:12px;font-weight:700;">
+    Voice Signal Context:
+  </span>
+  <br/>
+  ${voiceSignals.map((s) => `• ${s}`).join("<br/>")}
+`;
   },
 },
 }, // closes scatter series
