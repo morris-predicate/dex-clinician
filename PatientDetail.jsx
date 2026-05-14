@@ -949,7 +949,7 @@ const currentReviewWindow =
   })),
   links: signalGraph.links.map((link) => ({ ...link })),
 }}
-  width={820}
+  width={window.innerWidth - 120}
   height={540}
   cooldownTicks={0}
     nodeLabel={(node) =>
