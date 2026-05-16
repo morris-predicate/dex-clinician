@@ -887,14 +887,7 @@ const currentReviewWindow =
 
 {/* ── Fusion clinical significance card ───────────────────────── */}
 <section className="detail-section">
-  <div
-  className="detail-card"
-  style={{
-  border: "2px solid #BFDBFE",
-  background: "#F0F7FF",
-  boxShadow: "0 8px 24px rgba(37, 99, 235, 0.08)",
-}}
->
+  <div className="detail-card care-priority-card">
     {fusionLoading ? (
       <div className="empty-state-small">
         Loading fusion summary…

@@ -1,3 +1,20 @@
+/* ── Clinician Theme (Dark Default) ───────────────────────────────────── */
+
+:root {
+  --bg: #0b0f14;
+  --surface: #111827;
+  --surface-elevated: #1f2937;
+
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --border: #2b3545;
+
+  --primary: #3dbfee;
+  --success: #16a34a;
+  --danger: #dc2626;
+}
 /* ── Reset & base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #root { height: 100%; }
@@ -22,13 +39,17 @@ table { border-collapse: collapse; width: 100%; }
   padding: 20px;
 }
 .login-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 40px 32px;
   width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
-  border: 1px solid #e2e8f0;
+  max-width: 420px;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .login-logo {
   width: 56px; height: 56px;
@@ -369,4 +390,272 @@ table { border-collapse: collapse; width: 100%; }
   .detail-header-card {
     padding: 16px;
   }
+}
+/* ── Clinician Dark Mode Override ─────────────────────────────────────── */
+
+html,
+body,
+#root {
+  background: var(--bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.page {
+  background: var(--bg) !important;
+}
+
+.login-card,
+.patient-list,
+.patient-row,
+.detail-header-card,
+.detail-card,
+.empty-state,
+.transcript-msg-dex .transcript-content,
+.transcript-msg-patient .transcript-content {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+.patient-row:hover {
+  background: var(--surface-elevated) !important;
+}
+
+.page-header,
+.vitals-table th,
+.transcript-meta {
+  border-color: var(--border) !important;
+}
+
+.page-title,
+.detail-name,
+.patient-row-name,
+.patient-row-session-time,
+.transcript-content,
+.vitals-table td,
+.detail-section-title,
+.detail-bucket-label {
+  color: var(--text-primary) !important;
+}
+
+.page-sub,
+.patient-row-meta,
+.detail-meta,
+.detail-status,
+.transcript-role,
+.transcript-meta,
+.patient-row-entity-count,
+.empty-state,
+.muted,
+.muted-inline {
+  color: var(--text-secondary) !important;
+}
+
+.search-input,
+.login-input,
+.btn-secondary-small {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+.search-input:focus,
+.login-input:focus {
+  border-color: var(--primary) !important;
+}
+
+.login-btn {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+.transcript-msg-patient .transcript-content {
+  background: rgba(61, 191, 238, 0.14) !important;
+  border: 1px solid rgba(61, 191, 238, 0.2) !important;
+}
+
+.transcript-msg-dex .transcript-content {
+  background: var(--surface-elevated) !important;
+}
+
+.page,
+.detail-card,
+.detail-header-card,
+.patient-list {
+  border-radius: 16px;
+}
+/* ── Care Priority urgency card ───────────────────────────────────── */
+
+.detail-card:has(.care-priority),
+.care-priority-card {
+  position: relative;
+
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(239, 68, 68, 0.14),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      #151c2d 0%,
+      #101827 100%
+    ) !important;
+
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.06),
+    0 0 18px rgba(239, 68, 68, 0.18),
+    0 0 42px rgba(239, 68, 68, 0.10) !important;
+
+  transition: all 220ms ease;
+}
+/* ── Signal Intelligence Map (light canvas for clarity) ─────────────── */
+
+.signal-map-card,
+.signal-intelligence-map,
+.signal-map-canvas {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+/* Force React Flow canvas to stay light */
+
+.react-flow,
+.react-flow__renderer,
+.react-flow__pane,
+.react-flow__viewport {
+  background: #ffffff !important;
+}
+
+.react-flow__node {
+  color: #0f172a !important;
+}
+
+/* Improve edge visibility on white */
+.react-flow__edge-path {
+  stroke-opacity: 0.45;
+}
+/* ── Clinician logo ───────────────────────────────────────── */
+
+.login-logo-image {
+  display: block;
+  width: 110px;
+  height: auto;
+  margin: 0 auto 18px;
+  object-fit: contain;
+}
+/* ── Clinician login logo ───────────────────────────────────────── */
+
+.login-logo-image {
+  display: block;
+  width: 128px;
+  height: auto;
+  margin: 0 auto 14px !important;
+  object-fit: contain;
+  background: transparent !important;
+}
+/* ── Final login card override ───────────────────────────────────────── */
+
+.login-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+/* ── Final dark mode enforcement ─────────────────────────────────────── */
+
+html,
+body,
+#root,
+.page,
+.login-wrap {
+  background: var(--bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.login-card,
+.patient-list,
+.patient-row,
+.detail-header-card,
+.detail-card,
+.empty-state {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+.page-title,
+.login-title,
+.detail-name,
+.patient-row-name,
+.patient-row-session-time,
+.vitals-table td,
+.transcript-content {
+  color: var(--text-primary) !important;
+}
+
+.page-sub,
+.login-meta,
+.detail-meta,
+.detail-status,
+.patient-row-meta,
+.patient-row-entity-count,
+.transcript-role,
+.transcript-meta {
+  color: var(--text-secondary) !important;
+}
+/* ── Final login card override (remove blue square) ─────────────────── */
+
+.login-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.login-logo-image {
+  background: transparent !important;
+}
+/* ── FORCE Care Priority urgency glow ─────────────────────────────── */
+
+.care-priority-card,
+.detail-card.care-priority,
+.detail-card:has(.care-priority-title),
+.detail-card:has(.care-priority-content) {
+  position: relative !important;
+
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(239, 68, 68, 0.18),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      #181726 0%,
+      #101827 100%
+    ) !important;
+
+  border: 1px solid rgba(239, 68, 68, 0.38) !important;
+
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.08),
+    0 0 22px rgba(239, 68, 68, 0.22),
+    0 0 54px rgba(239, 68, 68, 0.12) !important;
+}
+/* ── Target Care Priority card by position ───────────────────────────── */
+
+.detail-header-card + .detail-card {
+  position: relative !important;
+
+  background:
+    radial-gradient(circle at top left, rgba(239, 68, 68, 0.22), transparent 42%),
+    linear-gradient(180deg, #181726 0%, #101827 100%) !important;
+
+  border: 1px solid rgba(239, 68, 68, 0.55) !important;
+
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.14),
+    0 0 28px rgba(239, 68, 68, 0.30),
+    0 0 72px rgba(239, 68, 68, 0.18) !important;
 }

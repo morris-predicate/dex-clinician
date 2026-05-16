@@ -28,7 +28,11 @@ export default function Login({ clinicId, onAuth }) {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={handleSubmit}>
-        <div className="login-logo">D</div>
+        <img
+  src="/ao-logo.png"
+  alt="Aō"
+  className="login-logo-image"
+/>
         <h1 className="login-title">Dex Clinician</h1>
         <p className="login-meta">
           Clinic: <strong>{clinicId}</strong>
