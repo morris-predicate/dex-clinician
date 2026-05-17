@@ -1797,7 +1797,7 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
                   }`}
                 >
                   <div className="transcript-role">
-                    {m.role === "user" ? "Patient" : "Dex"}
+                    {m.role === "user" ? "Patient" : "MILO"}
                   </div>
                   <div className="transcript-content">{m.content}</div>
                 </div>
