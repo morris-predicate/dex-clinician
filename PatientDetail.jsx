@@ -673,7 +673,10 @@ export default function PatientDetail({
   const [temporalTimeline, setTemporalTimeline] = useState(null);
   const [temporalLoading, setTemporalLoading] = useState(false);
 
-const graphRef = useRef();
+  const [currentSignalInsight, setCurrentSignalInsight] = useState(null);
+  const [currentSignalInsightLoading, setCurrentSignalInsightLoading] = useState(false);
+
+  const graphRef = useRef();
 
   const voiceDeviation =
     baseline?.voiceFeatures?.latest?.payload?.features?.voiceDeviation || null;
@@ -697,6 +700,7 @@ const graphRef = useRef();
   loadFusionSummary();
   loadSignalGraph();
   loadTemporalTimeline();
+  loadCurrentSignalInsight(patientData);
 })
       .catch((err) => {
         if (cancelled) return;
@@ -804,6 +808,43 @@ async function loadTemporalTimeline() {
     setTemporalTimeline(null);
   } finally {
     setTemporalLoading(false);
+  }
+}
+
+async function loadCurrentSignalInsight(patientData) {
+  const subjectUid =
+    patientData?.subjectUid ||
+    patientData?.patient?.subjectUid;
+
+  if (!subjectUid) {
+    setCurrentSignalInsight(null);
+    return;
+  }
+
+  setCurrentSignalInsightLoading(true);
+
+  try {
+    const res = await fetch(
+      `https://dex-proxy-production.up.railway.app/api/signals/current?subjectUid=${encodeURIComponent(subjectUid)}`,
+      {
+        headers: {
+          "X-Clinician-Key": clinicianKey,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    if (data?.ok) {
+      setCurrentSignalInsight(data);
+    } else {
+      setCurrentSignalInsight(null);
+    }
+  } catch (err) {
+    console.error("Current signal insight failed:", err);
+    setCurrentSignalInsight(null);
+  } finally {
+    setCurrentSignalInsightLoading(false);
   }
 }
 
@@ -952,6 +993,297 @@ const currentReviewWindow =
   />
 </section>
 
+{/* ── Fusion Signal Intelligence ───────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title">
+    Fusion Signal Intelligence
+  </div>
+
+  <div className="detail-card">
+    {currentSignalInsightLoading ? (
+      <div className="empty-state-small">
+        Loading signal intelligence…
+      </div>
+    ) : currentSignalInsight?.overallStatus ? (
+      <>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.1fr 0.9fr",
+            gap: 16,
+            alignItems: "stretch",
+          }}
+        >
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "#64748B",
+                  fontWeight: 800,
+                  marginBottom: 6,
+                }}
+              >
+                Clinical synthesis
+              </div>
+
+              <div
+                style={{
+                  fontWeight: 800,
+                  fontSize: 17,
+                  marginBottom: 6,
+                }}
+              >
+                {
+                  currentSignalInsight.overallStatus.clinician?.review
+                    ?.primaryFinding ||
+                  currentSignalInsight.overallStatus.title
+                }
+              </div>
+
+              <div className="muted" style={{ lineHeight: 1.55 }}>
+                {
+                  currentSignalInsight.overallStatus.clinician?.review
+                    ?.confidenceRationale ||
+                  currentSignalInsight.overallStatus.summary
+                }
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <span style={signalShiftPill({ severity: "mild" })}>
+                Confidence:{" "}
+                {titleCase(
+                  currentSignalInsight.overallStatus.fusionScore?.confidence
+                )}
+              </span>
+
+              <span style={signalShiftPill({ severity: "mild" })}>
+                Persistence:{" "}
+                {titleCase(
+                  currentSignalInsight.overallStatus.temporalContext?.summary
+                    ?.persistence
+                )}
+              </span>
+
+              <span style={signalShiftPill({ severity: "mild" })}>
+                Pattern:{" "}
+                {titleCase(
+                  currentSignalInsight.overallStatus.temporalContext?.summary
+                    ?.pattern
+                )}
+              </span>
+
+              <span style={signalShiftPill({ severity: "mild" })}>
+                Convergence:{" "}
+                {currentSignalInsight.overallStatus.fusionScore
+                  ?.crossDomainConvergence
+                  ? "Cross-domain"
+                  : "Single-domain"}
+              </span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid #E5E7EB",
+              borderRadius: 14,
+              overflow: "hidden",
+              background: "#0F172A",
+              minHeight: 210,
+            }}
+          >
+            <HighchartsReact
+              highcharts={Highcharts}
+              options={{
+                chart: {
+                  type: "bar",
+                  backgroundColor: "#0F172A",
+                  height: 220,
+                  animation: false,
+                  style: { fontFamily: "inherit" },
+                },
+                title: {
+                  text: "Signal Contribution",
+                  align: "left",
+                  style: {
+                    color: "#CBD5E1",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                  },
+                },
+                credits: { enabled: false },
+                legend: { enabled: false },
+                xAxis: {
+                  categories:
+                    currentSignalInsight.overallStatus.signalEvidence?.map(
+                      (s) => s.label
+                    ) || [],
+                  labels: {
+                    style: { color: "#94A3B8", fontSize: "11px" },
+                  },
+                  lineColor: "#334155",
+                  tickColor: "#334155",
+                },
+                yAxis: {
+                  min: 0,
+                  max: 1,
+                  title: {
+                    text: "Relative contribution",
+                    style: { color: "#64748B", fontSize: "10px" },
+                  },
+                  labels: {
+                    style: { color: "#64748B", fontSize: "10px" },
+                  },
+                  gridLineColor: "#1E293B",
+                },
+                tooltip: {
+                  backgroundColor: "#1E293B",
+                  borderColor: "#334155",
+                  style: { color: "#F8FAFC" },
+                  pointFormatter: function () {
+                    return `<b>${this.category}</b><br/>Contribution: ${Number(
+                      this.y
+                    ).toFixed(2)} / 1.00`;
+                  },
+                },
+                series: [
+                  {
+                    name: "Contribution",
+                    data:
+                      currentSignalInsight.overallStatus.signalEvidence?.map(
+                        (s) => Number(s.score || 0)
+                      ) || [],
+                    color: "#38BDF8",
+                    dataLabels: {
+                      enabled: true,
+                      style: {
+                        color: "#CBD5E1",
+                        fontSize: "10px",
+                        textOutline: "none",
+                      },
+                    },
+                  },
+                ],
+              }}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 14,
+            borderTop: "1px solid #E5E7EB",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 800,
+              marginBottom: 8,
+            }}
+          >
+            What changed together?
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            {currentSignalInsight.overallStatus.signalEvidence?.length ? (
+              currentSignalInsight.overallStatus.signalEvidence.map(
+                (signal) => (
+                  <div
+                    key={signal.signal}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: "9px 11px",
+                      borderRadius: 10,
+                      background: "#F8FAFC",
+                      border: "1px solid #E5E7EB",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700 }}>
+                        {signal.label}
+                      </div>
+                      <div
+                        className="muted"
+                        style={{ fontSize: 12, marginTop: 2 }}
+                      >
+                        {signal.explanation}
+                      </div>
+                    </div>
+
+                    <div
+                      className="muted"
+                      style={{
+                        fontSize: 12,
+                        textAlign: "right",
+                        minWidth: 120,
+                      }}
+                    >
+                      {titleCase(signal.magnitude)} ·{" "}
+                      {titleCase(signal.direction)}
+                    </div>
+                  </div>
+                )
+              )
+            ) : (
+              <div className="empty-state-small">
+                No changed signal evidence detected.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 14,
+            padding: 14,
+            borderRadius: 12,
+            background: "#F8FAFC",
+            border: "1px solid #E5E7EB",
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>
+            Clinical actionability
+          </div>
+
+          <div className="muted" style={{ lineHeight: 1.55 }}>
+            {
+              currentSignalInsight.overallStatus.clinician?.review
+                ?.recommendedReview
+            }
+          </div>
+
+          <div className="muted" style={{ marginTop: 8, lineHeight: 1.55 }}>
+            {
+              currentSignalInsight.overallStatus.temporalContext?.summary
+                ?.interpretation
+            }
+          </div>
+        </div>
+
+        <div
+          className="muted"
+          style={{
+            marginTop: 12,
+            fontSize: 12,
+          }}
+        >
+          {currentSignalInsight.disclaimer ||
+            "Descriptive signal intelligence only. Not diagnostic."}
+        </div>
+      </>
+    ) : (
+      <div className="empty-state-small">
+        Signal intelligence unavailable
+      </div>
+    )}
+  </div>
+</section>
 {/* ── Current Review Window ───────────────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
