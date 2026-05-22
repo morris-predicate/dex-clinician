@@ -10,7 +10,7 @@ export default function App() {
   // ── Resolve clinicId from URL on first render ───────────────────────────────
   const [clinicId] = useState(() => {
   const params = new URLSearchParams(window.location.search);
-  return params.get("clinic") || "production-v1";
+  return params.get("clinic") || "alpha-v1";
 });
 
   const [clinicianKey, setClinicianKey] = useState(() =>
