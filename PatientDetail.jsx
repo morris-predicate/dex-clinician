@@ -103,21 +103,62 @@ function getSeverityIcon(severity) {
 }
 
 // ─── Time-Aligned Insights ──────────────────────────────────────────────────
-function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
-  const [timeWindow, setTimeWindow] = useState("24h");
-  const [activeParams, setActiveParams] = useState(["HR", "RR", "SpO2", "Temp"]);
+function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
+  const [timeWindow, setTimeWindow] = useState("1h");
+  const [activeParams, setActiveParams] = useState(["HR", "HRV", "RR", "SpO2", "Temp"]);
   const [draggingParam, setDraggingParam] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const ALL_PARAMS = useMemo(() => [
-    { id: "HR",   label: "Heart Rate",   unit: "bpm",    color: "#EF4444", vitalType: "heart_rate",       yAxis: 0, shortLabel: "HR"   },
-    { id: "RR",   label: "Resp. Rate",   unit: "br/min", color: "#06B6D4", vitalType: "respiratory_rate",  yAxis: 0, shortLabel: "RR"   },
-    { id: "SpO2", label: "SpO₂",         unit: "%",      color: "#8B5CF6", vitalType: "oxygen_saturation", yAxis: 1, shortLabel: "SpO₂" },
-    { id: "Temp", label: "Temperature",  unit: "°C",     color: "#F59E0B", vitalType: "body_temperature",  yAxis: 1, shortLabel: "Temp" },
-  ], []);
+  {
+    id: "HR",
+    label: "Heart Rate",
+    unit: "bpm",
+    color: "#EF4444",
+    vitalType: "heart_rate",
+    yAxis: 0,
+    shortLabel: "HR",
+  },
+  {
+    id: "HRV",
+    label: "Heart Rate Variability",
+    unit: "ms",
+    color: "#14B8A6",
+    vitalType: "hrv_sdnn",
+    yAxis: 0,
+    shortLabel: "HRV",
+  },
+  {
+    id: "RR",
+    label: "Resp. Rate",
+    unit: "br/min",
+    color: "#06B6D4",
+    vitalType: "respiratory_rate",
+    yAxis: 0,
+    shortLabel: "RR",
+  },
+  {
+    id: "SpO2",
+    label: "SpO₂",
+    unit: "%",
+    color: "#8B5CF6",
+    vitalType: "spo2",
+    yAxis: 1,
+    shortLabel: "SpO₂",
+  },
+  {
+    id: "Temp",
+    label: "Temperature",
+    unit: "°C",
+    color: "#F59E0B",
+    vitalType: "body_temperature",
+    yAxis: 1,
+    shortLabel: "Temp",
+  },
+], []);
 
   const windowMs = useMemo(
-    () => ({ "6h": 6, "12h": 12, "24h": 24 }[timeWindow] * 3600 * 1000),
+    () => ({ "1h": 1, "6h": 6, "12h": 12, "24h": 24, "7d": 168 }[timeWindow] * 3600 * 1000),
     [timeWindow]
   );
 
@@ -134,19 +175,48 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
     return vals.map((v, i) => [endTime - wMs + i * step, v]);
   }, []);
 
-  const now = useMemo(() => Date.now(), []);
+ const now = useMemo(() => {
+  const latestVitalTime = Math.max(
+    ...((vitals || [])
+      .map((v) => new Date(v.timestamp).getTime())
+      .filter((t) => Number.isFinite(t)))
+  );
+
+  return Number.isFinite(latestVitalTime)
+    ? latestVitalTime
+    : Date.now();
+}, [vitals]);
 
   const mainSeries = useMemo(() => {
     return ALL_PARAMS
       .filter(p => activeParams.includes(p.id))
       .map(param => {
         const rawData = (vitals || [])
-          .filter(v => v.type === param.vitalType && (now - new Date(v.timestamp).getTime()) <= windowMs)
-          .map(v => [new Date(v.timestamp).getTime(), parseFloat(v.value)])
-          .sort((a, b) => a[0] - b[0]);
+  .filter((v) => {
+    const t = new Date(v.timestamp).getTime();
 
-        const isDemo = rawData.length === 0;
-        const data = isDemo ? getDemoData(param.id, now, windowMs) : rawData;
+    return (
+      v.type === param.vitalType &&
+      Number.isFinite(t) &&
+      t >= now - windowMs &&
+      t <= now
+    );
+  })
+  .map((v) => [
+    new Date(v.timestamp).getTime(),
+    parseFloat(v.value),
+  ])
+  .sort((a, b) => a[0] - b[0]);
+
+        const hasAnyRealVitals =
+  (vitals || []).length > 0;
+
+const isDemo =
+  rawData.length === 0 && !hasAnyRealVitals;
+
+const data = isDemo
+  ? getDemoData(param.id, now, windowMs)
+  : rawData;
 
         return {
           name: `${param.shortLabel} (${param.unit})`,
@@ -155,7 +225,7 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
           yAxis: param.yAxis,
           type: "spline",
           lineWidth: 2,
-          dashStyle: "Solid",
+          dashStyle: isDemo ? "Dash" : "Solid",
           marker: { enabled: true, radius: 4, symbol: "circle" },
         };
       });
@@ -182,22 +252,49 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
   }, [voiceDeviation, hasVdiData]);
 
   // Highcharts options ────────────────────────────────────────────────────────
-  const voiceCaptureEvents = useMemo(() => {
+const voiceCaptureEvents = useMemo(() => {
+  const latestSessionAt = patient?.latestSessionAt;
+
+  const hasVoiceCapture =
+    patient?.latestSessionId &&
+    voiceDeviation?.compared &&
+    patient?.latestEntities?.length;
+
+  if (!hasVoiceCapture || !latestSessionAt) {
+    return [];
+  }
+
+  const t = new Date(latestSessionAt).getTime();
+
+  if (
+    !Number.isFinite(t) ||
+    t < now - windowMs ||
+    t > now
+  ) {
+    return [];
+  }
+
   return [
     {
-      time: now - windowMs * 0.58,
+      time: t,
       label: "Voice capture event",
-      symptoms: ["Reported fever"],
-      voiceSignals: ["Reduced speech tempo", "Increased pause burden"],
-    },
-    {
-      time: now - windowMs * 0.32,
-      label: "Voice capture event",
-      symptoms: ["Reported fever"],
-      voiceSignals: ["Reduced speech tempo", "Increased pause burden"],
+
+      symptoms:
+        patient?.latestEntities
+          ?.filter(
+            (e) => e.category === "MEDICAL_CONDITION"
+          )
+          ?.map((e) => e.text) || [],
+
+      voiceSignals:
+        voiceDeviation?.features
+          ?.filter(
+            (f) => f.severity !== "stable"
+          )
+          ?.map((f) => f.label) || [],
     },
   ];
-}, [now, windowMs]);
+}, [patient, voiceDeviation, now, windowMs]);
   const mainChartOptions = useMemo(() => ({
     chart: {
       type: "spline",
@@ -306,7 +403,12 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline }) {
     type: "scatter",
     data: voiceCaptureEvents.map((event) => ({
       x: event.time,
-      y: 8,
+      y:
+  mainSeries?.[0]?.data?.length
+    ? mainSeries[0].data[
+        Math.floor(mainSeries[0].data.length / 2)
+      ]?.[1] ?? 0
+    : 0,
       label: event.label,
       symptoms: event.symptoms,
       voiceSignals: event.voiceSignals,
@@ -469,7 +571,7 @@ tooltip: {
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           {/* Window buttons */}
           <div style={{ display: "flex", gap: 3 }}>
-            {["6h", "12h", "24h"].map(w => (
+            {["1h", "6h", "12h", "24h", "7d"].map(w => (
               <button key={w} onClick={() => setTimeWindow(w)} style={{
                 padding: "3px 9px",
                 borderRadius: 6,
@@ -987,10 +1089,11 @@ const currentReviewWindow =
     Time-Aligned Insights
   </div>
   <TimeAlignedInsights
-    vitals={vitals}
-    voiceDeviation={voiceDeviation}
-    baseline={baseline}
-  />
+  vitals={vitals}
+  voiceDeviation={voiceDeviation}
+  baseline={baseline}
+  patient={patient}
+/>
 </section>
 
 {/* ── Fusion Signal Intelligence ───────────────────────────── */}
@@ -1030,26 +1133,24 @@ const currentReviewWindow =
               </div>
 
               <div
-                style={{
-                  fontWeight: 800,
-                  fontSize: 17,
-                  marginBottom: 6,
-                }}
-              >
-                {
-                  currentSignalInsight.overallStatus.clinician?.review
-                    ?.primaryFinding ||
-                  currentSignalInsight.overallStatus.title
-                }
-              </div>
+  style={{
+    fontWeight: 800,
+    fontSize: 17,
+    marginBottom: 6,
+  }}
+>
+  {currentSignalInsight.overallStatus.fusionScore?.evidenceCount > 0
+    ? currentSignalInsight.overallStatus.clinician?.review
+        ?.primaryFinding
+    : "No convergent signal drift detected in the current review window."}
+</div>
 
               <div className="muted" style={{ lineHeight: 1.55 }}>
-                {
-                  currentSignalInsight.overallStatus.clinician?.review
-                    ?.confidenceRationale ||
-                  currentSignalInsight.overallStatus.summary
-                }
-              </div>
+  {currentSignalInsight.overallStatus.fusionScore?.evidenceCount > 0
+    ? currentSignalInsight.overallStatus.clinician?.review
+        ?.confidenceRationale
+    : "Current physiologic and voice-pattern signals are close to the recent baseline. Continue trending longitudinal changes and compare with patient-reported symptoms."}
+</div>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -1253,9 +1354,10 @@ const currentReviewWindow =
 
           <div className="muted" style={{ lineHeight: 1.55 }}>
             {
-              currentSignalInsight.overallStatus.clinician?.review
-                ?.recommendedReview
-            }
+  currentSignalInsight.overallStatus.clinician?.review
+    ?.recommendedReview ||
+    "Continue longitudinal monitoring and correlate with patient-reported symptoms."
+}
           </div>
 
           <div className="muted" style={{ marginTop: 8, lineHeight: 1.55 }}>
