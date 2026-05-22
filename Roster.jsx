@@ -116,11 +116,23 @@ function PatientRow({ patient, onClick }) {
           {!hasSession && <span className="badge badge-pending">Awaiting session</span>}
         </div>
         <div className="patient-row-meta">
-          {patient.dob && <>DOB {patient.dob}</>}
-          {patient.sex && <> · {patient.sex}</>}
-          {patient.subjectUid && <> · Subject ID {patient.subjectUid}</>}
-          {patient.status && <> · {patient.status}</>}
-        </div>
+  {patient.dob && <>DOB {patient.dob}</>}
+  {patient.sex && <> · {patient.sex}</>}
+
+  {patient.subjectUid && (
+    <>
+      {" "}· Subject {patient.subjectUid.slice(-6)}
+    </>
+  )}
+
+  {patient.patientId && (
+    <>
+      {" "}· Profile {patient.patientId.slice(-6)}
+    </>
+  )}
+
+  {patient.status && <> · {patient.status}</>}
+</div>
       </div>
 
       <div className="patient-row-session">

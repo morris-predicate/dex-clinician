@@ -151,7 +151,7 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
     label: "Temperature",
     unit: "°C",
     color: "#F59E0B",
-    vitalType: "body_temperature",
+    vitalType: "wrist_temperature",
     yAxis: 1,
     shortLabel: "Temp",
   },
@@ -223,9 +223,14 @@ const data = isDemo
           data,
           color: param.color,
           yAxis: param.yAxis,
-          type: "spline",
-          lineWidth: 2,
-          dashStyle: isDemo ? "Dash" : "Solid",
+          type: data.length < 2 ? "scatter" : "spline",
+          lineWidth: data.length < 2 ? 0 : 2,
+          dashStyle:
+  	    isDemo
+              ? "Dash"
+              : data.length < 5
+              ? "ShortDash"
+              : "Solid",
           marker: { enabled: true, radius: 4, symbol: "circle" },
         };
       });
