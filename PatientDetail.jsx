@@ -1,5 +1,11 @@
-import React, { useRef, useCallback, useMemo } from "react";
-import { useEffect, useState } from "react";
+import React, {
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+  useState,
+} from "react";
+
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import ForceGraph2D from "react-force-graph-2d";
@@ -120,14 +126,14 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
     shortLabel: "HR",
   },
   {
-    id: "HRV",
-    label: "Heart Rate Variability",
-    unit: "ms",
-    color: "#14B8A6",
-    vitalType: "hrv_sdnn",
-    yAxis: 0,
-    shortLabel: "HRV",
-  },
+  id: "HRV",
+  label: "Heart Rate Variability",
+  unit: "ms",
+  color: "#14B8A6",
+  vitalType: "hrv",
+  yAxis: 0,
+  shortLabel: "HRV",
+},
   {
     id: "RR",
     label: "Resp. Rate",
@@ -138,14 +144,14 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
     shortLabel: "RR",
   },
   {
-    id: "SpO2",
-    label: "SpO₂",
-    unit: "%",
-    color: "#8B5CF6",
-    vitalType: "spo2",
-    yAxis: 1,
-    shortLabel: "SpO₂",
-  },
+  id: "SpO2",
+  label: "SpO₂",
+  unit: "%",
+  color: "#8B5CF6",
+  vitalType: "oxygen_saturation",
+  yAxis: 1,
+  shortLabel: "SpO₂",
+},
   {
     id: "Temp",
     label: "Temperature",
@@ -163,18 +169,7 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
   );
 
   // Stable demo data so the chart looks populated when no wearable is connected
-  const getDemoData = useCallback((paramId, endTime, wMs) => {
-    const sequences = {
-      HR:   [72, 75, 78, 83, 115, 118, 93, 84],
-      RR:   [16, 16, 17, 18,  24,  24, 22, 21],
-      SpO2: [97, 97, 97, 97,  97,  97, 97, 97],
-      Temp: [37.0, 37.0, 37.1, 37.2, 37.2, 37.2, 37.1, 37.1],
-    };
-    const vals = sequences[paramId] || Array(8).fill(70);
-    const step = wMs / (vals.length - 1);
-    return vals.map((v, i) => [endTime - wMs + i * step, v]);
-  }, []);
-
+  
  const now = useMemo(() => {
   const latestVitalTime = Math.max(
     ...((vitals || [])
@@ -207,16 +202,8 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
     parseFloat(v.value),
   ])
   .sort((a, b) => a[0] - b[0]);
-
-        const hasAnyRealVitals =
-  (vitals || []).length > 0;
-
-const isDemo =
-  rawData.length === 0 && !hasAnyRealVitals;
-
-const data = isDemo
-  ? getDemoData(param.id, now, windowMs)
-  : rawData;
+        
+const data = rawData;
 
         return {
           name: `${param.shortLabel} (${param.unit})`,
@@ -226,15 +213,13 @@ const data = isDemo
           type: data.length < 2 ? "scatter" : "spline",
           lineWidth: data.length < 2 ? 0 : 2,
           dashStyle:
-  	    isDemo
-              ? "Dash"
-              : data.length < 5
-              ? "ShortDash"
-              : "Solid",
+  data.length < 5
+    ? "ShortDash"
+    : "Solid",
           marker: { enabled: true, radius: 4, symbol: "circle" },
         };
       });
-  }, [ALL_PARAMS, activeParams, vitals, windowMs, now, getDemoData]);
+  }, [ALL_PARAMS, activeParams, vitals, windowMs, now]);
 
   // VDI ──────────────────────────────────────────────────────────────────────
   const VDI_SCORES = { stable: 8, mild: 38, moderate: 62, significant: 88 };
@@ -257,12 +242,12 @@ const data = isDemo
   }, [voiceDeviation, hasVdiData]);
 
   // Highcharts options ────────────────────────────────────────────────────────
-const voiceCaptureEvents = useMemo(() => {
+  const voiceCaptureEvents = useMemo(() => {
   const latestSessionAt = patient?.latestSessionAt;
 
   const hasVoiceCapture =
     patient?.latestSessionId &&
-    voiceDeviation?.compared &&
+    patient?.latestSessionAt &&
     patient?.latestEntities?.length;
 
   if (!hasVoiceCapture || !latestSessionAt) {
@@ -543,9 +528,7 @@ tooltip: {
   const dateLabel = new Date().toLocaleDateString("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
   }).replace(/\s/g, "-");
-
-  const hasDemo = mainSeries.some(s => s.dashStyle === "Dash");
-
+  
   return (
     <div style={{
       border: "1px solid #1E293B",
@@ -743,11 +726,7 @@ tooltip: {
             {item.label}
           </span>
         ))}
-        {hasDemo && (
-          <span style={{ fontSize: 10, color: "#334155", marginLeft: 8 }}>
-            — Dashed lines = demo data (no wearable connected)
-          </span>
-        )}
+        
       </div>
     </div>
   );
@@ -769,12 +748,11 @@ export default function PatientDetail({
 
   const [showTemporalTrajectory, setShowTemporalTrajectory] = useState(false);
   const [showReportedDetails, setShowReportedDetails] = useState(false);
+  const [showVitals, setShowVitals] = useState(false);
 
   const [fusionSummary, setFusionSummary] = useState(null);
   const [fusionLoading, setFusionLoading] = useState(false);
 
-  const [signalGraph, setSignalGraph] = useState(null);
-  const [signalGraphLoading, setSignalGraphLoading] = useState(false);
   const [selectedSignalNode, setSelectedSignalNode] = useState(null);
 
   const [temporalTimeline, setTemporalTimeline] = useState(null);
@@ -805,7 +783,6 @@ export default function PatientDetail({
   setBaseline(baselineData);
 
   loadFusionSummary();
-  loadSignalGraph();
   loadTemporalTimeline();
   loadCurrentSignalInsight(patientData);
 })
@@ -818,7 +795,12 @@ export default function PatientDetail({
     return () => { cancelled = true; };
   }, [patientId, clinicId, clinicianKey, onLogout]);
 useEffect(() => {
-  if (!graphRef.current || !signalGraph) return;
+  if (
+    !graphRef.current ||
+    !currentSignalInsight?.overallStatus?.signalEvidence?.length
+  ) {
+    return;
+  }
 
   const fg = graphRef.current;
 
@@ -826,7 +808,7 @@ useEffect(() => {
     fg.centerAt(0, 30, 0);
     fg.zoom(0.92, 0);
   });
-}, [signalGraph]);
+}, [currentSignalInsight]);
 
 async function loadFusionSummary() {
   if (!patientId) return;
@@ -855,36 +837,6 @@ async function loadFusionSummary() {
     setFusionSummary(null);
   } finally {
     setFusionLoading(false);
-  }
-}
-
-async function loadSignalGraph() {
-  if (!patientId) return;
-
-  setSignalGraphLoading(true);
-
-  try {
-    const res = await fetch(
-      `https://dex-proxy-production.up.railway.app/api/fusion/${encodeURIComponent(patientId)}/graph`,
-      {
-        headers: {
-          "X-Clinician-Key": clinicianKey,
-        },
-      }
-    );
-
-    const data = await res.json();
-
-    if (data?.ok) {
-   setSignalGraph(data.graph);
-} else {
-      setSignalGraph(null);
-    }
-  } catch (err) {
-    console.error("Signal graph failed:", err);
-    setSignalGraph(null);
-  } finally {
-    setSignalGraphLoading(false);
   }
 }
 
@@ -999,9 +951,27 @@ async function handleToggleTranscript() {
   })).filter((b) => b.items.length > 0);
 
 const currentReviewWindow =
-  temporalTimeline?.windows?.find(
-    (window) => window.id === "current_window"
-  ) || null;
+  currentSignalInsight?.overallStatus
+    ?.signalEvidence?.length
+    ? {
+        clinicalContext:
+          currentSignalInsight.overallStatus.clinician?.review
+            ?.recommendedReview,
+        signals:
+          currentSignalInsight.overallStatus.signalEvidence.map(
+            (signal) => ({
+              id: signal.signal,
+              label: signal.label,
+              severity: signal.severity,
+              interpretation: signal.explanation,
+              percentChange: undefined,
+            })
+          ),
+      }
+    : null;
+
+const hasCurrentSignalEvidence =
+  currentSignalInsight?.overallStatus?.signalEvidence?.length > 0;
 
   return (
     <div className="page">
@@ -1296,47 +1266,53 @@ const currentReviewWindow =
 
           <div style={{ display: "grid", gap: 8 }}>
             {currentSignalInsight.overallStatus.signalEvidence?.length ? (
-              currentSignalInsight.overallStatus.signalEvidence.map(
-                (signal) => (
-                  <div
-                    key={signal.signal}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      padding: "9px 11px",
-                      borderRadius: 10,
-                      background: "#F8FAFC",
-                      border: "1px solid #E5E7EB",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>
-                        {signal.label}
-                      </div>
-                      <div
-                        className="muted"
-                        style={{ fontSize: 12, marginTop: 2 }}
-                      >
-                        {signal.explanation}
-                      </div>
-                    </div>
+  currentSignalInsight.overallStatus.signalEvidence.map(
+    (signal) => (
+      <div
+        key={signal.signal}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "9px 11px",
+          borderRadius: 10,
+          background: "#111827",
+          border: "1px solid #334155",
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 700 }}>
+            {signal.label}
+          </div>
 
-                    <div
-                      className="muted"
-                      style={{
-                        fontSize: 12,
-                        textAlign: "right",
-                        minWidth: 120,
-                      }}
-                    >
-                      {titleCase(signal.magnitude)} ·{" "}
-                      {titleCase(signal.direction)}
-                    </div>
-                  </div>
-                )
-              )
-            ) : (
+          <div
+            className="muted"
+            style={{
+              fontSize: 12,
+              marginTop: 2,
+              color: "#94A3B8",
+            }}
+          >
+            {signal.explanation}
+          </div>
+        </div>
+
+        <div
+          className="muted"
+          style={{
+            fontSize: 12,
+            textAlign: "right",
+            minWidth: 120,
+            color: "#94A3B8",
+          }}
+        >
+          {titleCase(signal.magnitude)} ·{" "}
+          {titleCase(signal.direction)}
+        </div>
+      </div>
+    )
+  )
+) : (
               <div className="empty-state-small">
                 No changed signal evidence detected.
               </div>
@@ -1349,8 +1325,8 @@ const currentReviewWindow =
             marginTop: 14,
             padding: 14,
             borderRadius: 12,
-            background: "#F8FAFC",
-            border: "1px solid #E5E7EB",
+            background: "#111827",
+            border: "1px solid #334155",
           }}
         >
           <div style={{ fontWeight: 800, marginBottom: 6 }}>
@@ -1391,6 +1367,8 @@ const currentReviewWindow =
     )}
   </div>
 </section>
+{hasCurrentSignalEvidence && (
+<>
 {/* ── Current Review Window ───────────────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
@@ -1456,7 +1434,11 @@ const currentReviewWindow =
     )}
   </div>
 </section>
+</>
+)}
 
+{hasCurrentSignalEvidence && (
+<>
 {/* ── Signal Intelligence Map ─────────────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
@@ -1464,11 +1446,11 @@ const currentReviewWindow =
   </div>
 
   <div className="detail-card">
-    {signalGraphLoading ? (
-      <div className="empty-state-small">
-        Loading signal map…
-      </div>
-    ) : signalGraph?.nodes?.length ? (
+    {currentSignalInsightLoading ? (
+  <div className="empty-state-small">
+    Loading signal map…
+  </div>
+) : currentSignalInsight?.overallStatus?.signalEvidence?.length ? (
       <>
         <div className="muted" style={{ marginBottom: 12, lineHeight: 1.5 }}>
   This map shows how patient-reported symptoms, voice features, and physiologic
@@ -1497,41 +1479,77 @@ const currentReviewWindow =
     overflow: "hidden",
   }}
 >
- <ForceGraph2D
+<ForceGraph2D
   ref={graphRef}
   graphData={{
-  nodes: signalGraph.nodes.map((node) => ({
-    ...node,
-    ...hubSpokePosition(node.id),
-  })),
-  links: signalGraph.links.map((link) => ({ ...link })),
-}}
-  width={window.innerWidth - 120}
-  height={540}
+    nodes: [
+      {
+        id: "fusion_context",
+        label: "Clinical signal context",
+        group: "fusion",
+        fx: 0,
+        fy: 0,
+      },
+
+      ...(currentSignalInsight?.overallStatus?.signalEvidence || []).map(
+        (signal, index) => ({
+          id: signal.signal,
+          label: signal.label,
+          clinicalContext: signal.explanation,
+          group: "vital_signal",
+
+          fx:
+            Math.cos(
+              (index /
+                currentSignalInsight.overallStatus
+                  .signalEvidence.length) *
+                Math.PI *
+                2
+            ) * 240,
+
+          fy:
+            Math.sin(
+              (index /
+                currentSignalInsight.overallStatus
+                  .signalEvidence.length) *
+                Math.PI *
+                2
+            ) * 140,
+        })
+      ),
+    ],
+
+    links: (
+      currentSignalInsight?.overallStatus?.signalEvidence || []
+    ).map((signal) => ({
+      source: signal.signal,
+      target: "fusion_context",
+      label: signal.direction,
+    })),
+  }}
+
+  width={Math.max(window.innerWidth - 280, 800)}
+  height={420}
+
   cooldownTicks={0}
-    nodeLabel={(node) =>
+  enableZoomInteraction={false}
+  enablePanInteraction={false}
+  enableNodeDrag={false}
+
+  nodeLabel={(node) =>
     `${node.label}\n\n${node.clinicalContext || ""}`
   }
-  linkLabel={(link) =>
-    `Relationship: ${link.label || link.relationship}`
-  }
-  nodeAutoColorBy="group"
-  nodeRelSize={9}
-  nodeVal={(node) =>
-  node.group === "fusion" ? 24 : 10
-}
-  linkDirectionalArrowLength={5}
-  linkDirectionalArrowRelPos={1}
-  linkCurvature={0.15}
- 
-enableZoomInteraction={false}
-enablePanInteraction={false}
-enableNodeDrag={false}
 
-onNodeClick={(node) => setSelectedSignalNode(node)}
+  nodeRelSize={10}
+
+  linkDirectionalArrowLength={4}
+  linkDirectionalArrowRelPos={1}
+  linkCurvature={0.1}
+
   nodeCanvasObject={(node, ctx, globalScale) => {
     const label = node.label;
     const fontSize = 12 / globalScale;
+
     ctx.font = `${fontSize}px Sans-Serif`;
 
     const textWidth = ctx.measureText(label).width;
@@ -1541,11 +1559,7 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
     ctx.fillStyle =
       node.group === "fusion"
         ? "#111827"
-        : node.group === "voice_signal"
-        ? "#EEF2FF"
-        : node.group === "vital_signal"
-        ? "#ECFDF5"
-        : "#FEF3C7";
+        : "#ECFDF5";
 
     ctx.strokeStyle =
       node.group === "fusion"
@@ -1570,6 +1584,7 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
     ctx.lineTo(x, y + radius);
     ctx.quadraticCurveTo(x, y, x + radius, y);
     ctx.closePath();
+
     ctx.fill();
     ctx.stroke();
 
@@ -1582,6 +1597,10 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
     ctx.textBaseline = "middle";
     ctx.fillText(label, node.x, node.y);
   }}
+
+  onNodeClick={(node) =>
+    setSelectedSignalNode(node)
+  }
 />
 </div>
 
@@ -1618,9 +1637,16 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
   </div>
 )}
 
-        <div className="muted" style={{ marginTop: 12, fontSize: 12 }}>
-          {signalGraph.fdaSafeDisclaimer}
-        </div>
+        <div
+  className="muted"
+  style={{
+    marginTop: 12,
+    fontSize: 12,
+  }}
+>
+  {currentSignalInsight?.disclaimer ||
+    "Descriptive signal intelligence only. Not diagnostic."}
+</div>
       </>
     ) : (
       <div className="empty-state-small">
@@ -1629,6 +1655,8 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
     )}
   </div>
 </section>
+</>
+)}
 
 {/* ── Temporal Signal Intelligence ───────────────────────────── */}
 <section className="detail-section">
@@ -1896,22 +1924,35 @@ onNodeClick={(node) => setSelectedSignalNode(node)}
 )}
 </section>
 
-{/* ── Vitals (placeholder until Validic is live) ───────────────────── */}
-      <section className="detail-section">
-        <div className="detail-section-title">Vitals</div>
-        <div className="detail-card">
-          {vitals && vitals.length > 0 ? (
-            <VitalsTable vitals={vitals} />
-          ) : (
-            <div className="empty-state-small">
-              No wearable connected.
-              <span className="muted-inline">
-                {" "}Voice-only monitoring active
-              </span>
-            </div>
-          )}
+{/* ── Vitals ───────────────────────────────────────────── */}
+<section className="detail-section">
+  <div className="detail-section-title-row">
+    <div className="detail-section-title">Vitals</div>
+
+    <button
+      className="btn-secondary-small"
+      onClick={() => setShowVitals(!showVitals)}
+      type="button"
+    >
+      {showVitals ? "Hide" : "Show"}
+    </button>
+  </div>
+
+  {showVitals && (
+    <div className="detail-card">
+      {vitals && vitals.length > 0 ? (
+        <VitalsTable vitals={vitals} />
+      ) : (
+        <div className="empty-state-small">
+          No wearable connected.
+          <span className="muted-inline">
+            {" "}Voice-only monitoring active
+          </span>
         </div>
-      </section>
+      )}
+    </div>
+  )}
+</section>
 
 {/* ── Baseline status ───────────────────────────────────────────── */}
 <section className="detail-section">
@@ -2299,6 +2340,7 @@ function prettyVitalType(t) {
     oxygen_saturation: "SpO₂",
     body_temperature: "Body temp",
     respiratory_rate: "Resp rate",
+    wrist_temperature: "Wrist temp",
   }[t] || t;
 }
 
