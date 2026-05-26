@@ -302,54 +302,62 @@ const data = rawData;
       itemStyle: { color: "#94A3B8", fontSize: "11px" },
       itemHoverStyle: { color: "#FFFFFF" },
     },
-    xAxis: {
+xAxis: {
   type: "datetime",
+  min: now - windowMs,
+  max: now,
   gridLineColor: "#1E293B",
   lineColor: "#334155",
   tickColor: "#334155",
   labels: {
     style: { color: "#64748B", fontSize: "11px" },
-    format: "{value:%H:%M}",
+    formatter: function () {
+      if (timeWindow === "7d") {
+        return Highcharts.dateFormat("%b %e", this.value);
+      }
+
+      return Highcharts.dateFormat("%H:%M", this.value);
+    },
   },
- plotLines: voiceCaptureEvents.map((event) => ({
-  value: event.time,
-  color: "#22C55E",
-  width: 1,
-  dashStyle: "ShortDash",
-  zIndex: 10,
+  plotLines: voiceCaptureEvents.map((event) => ({
+    value: event.time,
+    color: "#22C55E",
+    width: 1,
+    dashStyle: "ShortDash",
+    zIndex: 10,
 
-  label: {
-    useHTML: true,
-    text: `
-      <div style="
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        gap:4px;
-      ">
+    label: {
+      useHTML: true,
+      text: `
         <div style="
-          width:10px;
-          height:10px;
-          border-radius:999px;
-          background:#22C55E;
-          border:2px solid #0F172A;
-          box-shadow:0 0 0 2px rgba(34,197,94,.25);
-        "></div>
-
-        <div style="
-          color:#22C55E;
-          font-size:10px;
-          font-weight:600;
-          white-space:nowrap;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:4px;
         ">
-          Voice capture
+          <div style="
+            width:10px;
+            height:10px;
+            border-radius:999px;
+            background:#22C55E;
+            border:2px solid #0F172A;
+            box-shadow:0 0 0 2px rgba(34,197,94,.25);
+          "></div>
+
+          <div style="
+            color:#22C55E;
+            font-size:10px;
+            font-weight:600;
+            white-space:nowrap;
+          ">
+            Voice capture
+          </div>
         </div>
-      </div>
-    `,
-    rotation: 0,
-    y: 18,
-  },
-})),
+      `,
+      rotation: 0,
+      y: 18,
+    },
+  })),
 },
     yAxis: [
       {
@@ -370,7 +378,7 @@ const data = rawData;
   backgroundColor: "#1E293B",
   borderColor: "#334155",
   style: { color: "#F8FAFC" },
-  xDateFormat: "%H:%M",
+  xDateFormat: timeWindow === "7d" ? "%b %e, %H:%M" : "%H:%M",
   shared: false,
 
   positioner: function (labelWidth, labelHeight, point) {
@@ -450,7 +458,7 @@ tooltip: {
 },
 }, // closes scatter series
 ], // closes series array
-}), [mainSeries, voiceCaptureEvents]);
+}), [mainSeries, voiceCaptureEvents, timeWindow, windowMs, now]);
 
   const vdiChartOptions = useMemo(() => ({
     chart: {
@@ -674,7 +682,11 @@ tooltip: {
               Drag a parameter from the left to begin
             </div>
           ) : (
-            <HighchartsReact highcharts={Highcharts} options={mainChartOptions} />
+            <HighchartsReact
+  key={`main-${timeWindow}-${now}`}
+  highcharts={Highcharts}
+  options={mainChartOptions}
+/>
           )}
         </div>
       </div>
@@ -683,7 +695,11 @@ tooltip: {
       <div style={{ borderTop: "1px solid #1E293B" }}>
         {hasVdiData && vdiBarData ? (
           <div style={{ paddingLeft: 136 }}>
-            <HighchartsReact highcharts={Highcharts} options={vdiChartOptions} />
+            <HighchartsReact
+  key={`vdi-${timeWindow}-${now}`}
+  highcharts={Highcharts}
+  options={vdiChartOptions}
+/>
           </div>
         ) : (
           <div style={{
