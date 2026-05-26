@@ -37,3 +37,71 @@ export const fetchTranscript = ({ patientId, ...opts }) =>
 
 export const fetchPatientBaseline = ({ patientId, ...opts }) =>
   request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, opts);
+
+export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
+  const candidatePaths = [
+    patientId
+      ? `/api/patients/${encodeURIComponent(patientId)}/vitals`
+      : null,
+
+    patientId
+      ? `/api/clinician/patients/${encodeURIComponent(patientId)}/vitals`
+      : null,
+
+    subjectUid
+      ? `/api/patients/${encodeURIComponent(subjectUid)}/vitals`
+      : null,
+
+    subjectUid
+      ? `/api/patients/${encodeURIComponent(subjectUid)}/vitals?subjectUid=${encodeURIComponent(subjectUid)}`
+      : null,
+
+    subjectUid
+      ? `/api/vitals?subjectUid=${encodeURIComponent(subjectUid)}`
+      : null,
+
+    subjectUid
+      ? `/api/signals/vitals?subjectUid=${encodeURIComponent(subjectUid)}`
+      : null,
+  ].filter(Boolean);
+
+  let firstSuccessfulEmpty = [];
+
+  for (const path of candidatePaths) {
+    try {
+      const data = await request(path, { clinicianKey, clinicId });
+
+      const candidate =
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data?.vitals)
+          ? data.vitals
+          : Array.isArray(data?.readings)
+          ? data.readings
+          : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data?.results)
+          ? data.results
+          : [];
+
+      if (candidate.length > 0) {
+  console.log("[fetchPatientVitals] found vitals", {
+    path,
+    count: candidate.length,
+  });
+}
+
+      if (candidate.length > 0) {
+        return candidate;
+      }
+
+      firstSuccessfulEmpty = candidate;
+    } catch (err) {
+      console.warn("[fetchPatientVitals] candidate failed", path, err.message);
+    }
+  }
+
+  return firstSuccessfulEmpty;
+}

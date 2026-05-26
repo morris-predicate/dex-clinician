@@ -13,6 +13,7 @@ import {
   fetchPatient,
   fetchTranscript,
   fetchPatientBaseline,
+  fetchPatientVitals,
 } from "./api.js";
 
 // Same display order + labels as the patient PWA's done screen, for consistency.
@@ -47,6 +48,133 @@ function formatPercent(value) {
   if (!Number.isFinite(n)) return "—";
 
   return `${n > 0 ? "+" : ""}${n}%`;
+}
+
+function normalizeVitalType(type) {
+  if (!type) return "";
+
+  const raw = String(type);
+  const normalized = raw.toLowerCase();
+
+  const aliases = {
+    heart_rate: "heart_rate",
+    "heart rate": "heart_rate",
+    heartrate: "heart_rate",
+    hr: "heart_rate",
+    bpm: "heart_rate",
+    HeartRate: "heart_rate",
+    "Heart Rate": "heart_rate",
+
+    hrv: "hrv_sdnn",
+    hrv_sdnn: "hrv_sdnn",
+    sdnn: "hrv_sdnn",
+    heart_rate_variability: "hrv_sdnn",
+    "heart rate variability": "hrv_sdnn",
+    HeartRateVariabilitySDNN: "hrv_sdnn",
+    "Heart Rate Variability": "hrv_sdnn",
+
+    respiratory_rate: "respiratory_rate",
+    "respiratory rate": "respiratory_rate",
+    respiration_rate: "respiratory_rate",
+    "respiration rate": "respiratory_rate",
+    breathing_rate: "respiratory_rate",
+    rr: "respiratory_rate",
+    brpm: "respiratory_rate",
+    RespirationRate: "respiratory_rate",
+    "Respiratory Rate": "respiratory_rate",
+
+    spo2: "spo2",
+    sp_o2: "spo2",
+    SpO2: "spo2",
+    "SpO2": "spo2",
+    "SpO₂": "spo2",
+    oxygen_saturation: "spo2",
+    "oxygen saturation": "spo2",
+    oxygen_saturation_percent: "spo2",
+    oxygen_saturation_percentage: "spo2",
+    peripheral_oxygen_saturation: "spo2",
+    "Oxygen Saturation": "spo2",
+
+    body_temperature: "body_temperature",
+    "body temperature": "body_temperature",
+    body_temp: "body_temperature",
+    temperature: "body_temperature",
+    temp: "body_temperature",
+    "Temperature": "body_temperature",
+
+    wrist_temperature: "wrist_temperature",
+    "wrist temperature": "wrist_temperature",
+    wrist_temp: "wrist_temperature",
+    apple_sleeping_wrist_temperature: "wrist_temperature",
+    sleeping_wrist_temperature: "wrist_temperature",
+    "Apple Sleeping Wrist Temperature": "wrist_temperature",
+  };
+
+  return aliases[raw] || aliases[normalized] || normalized;
+}
+
+function getVitalDisplayUnit(vital) {
+  const type = normalizeVitalType(
+    vital?.type || vital?.metric || vital?.name || vital?.vitalType
+  );
+
+  const unitMap = {
+    heart_rate: "bpm",
+    hrv_sdnn: "ms",
+    respiratory_rate: "br/min",
+    spo2: "%",
+    body_temperature: "°C",
+    wrist_temperature: "°C Δ",
+  };
+
+  return unitMap[type] || "";
+}
+
+function getVitalDisplayLabel(vital) {
+  const type = normalizeVitalType(
+    vital?.type || vital?.metric || vital?.name || vital?.vitalType
+  );
+
+  const labelMap = {
+    heart_rate: "Heart Rate",
+    hrv_sdnn: "Heart Rate Variability",
+    respiratory_rate: "Respiratory Rate",
+    spo2: "Oxygen Saturation",
+    body_temperature: "Temperature",
+    wrist_temperature: "Wrist Temperature Δ",
+  };
+
+  return labelMap[type] || vital?.type || vital?.metric || "Vital";
+}
+
+function formatVitalDisplayValue(vital) {
+  const type = normalizeVitalType(
+    vital?.type || vital?.metric || vital?.name || vital?.vitalType
+  );
+
+  const n = Number(vital?.value);
+
+  if (!Number.isFinite(n)) {
+    return vital?.value ?? "—";
+  }
+
+  if (type === "spo2" && n > 0 && n <= 1) {
+    return Math.round(n * 100);
+  }
+
+  if (type === "heart_rate" || type === "respiratory_rate") {
+    return Math.round(n);
+  }
+
+  if (type === "hrv_sdnn") {
+    return n.toFixed(1);
+  }
+
+  if (type === "body_temperature" || type === "wrist_temperature") {
+    return n.toFixed(1);
+  }
+
+  return n;
 }
 
 function getDeviationSummary(voiceDeviation) {
@@ -108,118 +236,697 @@ function getSeverityIcon(severity) {
   }[severity] || "🟢";
 }
 
+function hasReportedFever(entities = []) {
+  return entities.some((entity) => {
+    const text = String(entity?.text || "").toLowerCase();
+    const category = entity?.category;
+
+    return (
+      category === "MEDICAL_CONDITION" &&
+      /\bfever\b|\bfebrile\b|\bchills\b/.test(text)
+    );
+  });
+}
+
+function getLatestVitalTimestamp(vitals = []) {
+  const times = vitals
+    .map((v) =>
+      new Date(
+        v.timestamp ||
+          v.observedAt ||
+          v.startDate ||
+          v.endDate ||
+          v.createdAt ||
+          v.updatedAt
+      ).getTime()
+    )
+    .filter((t) => Number.isFinite(t));
+
+  if (!times.length) return null;
+
+  return new Date(Math.max(...times));
+}
+
+function formatObservationTime(date) {
+  if (!date) return "Not available";
+
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function clinicianizeText(value) {
+  if (!value) return "";
+
+  return String(value)
+    .replaceAll("your usual baseline", "the patient’s usual baseline")
+    .replaceAll("your baseline", "the patient’s baseline")
+    .replaceAll("your usual breathing pattern", "the patient’s usual breathing pattern")
+    .replaceAll("your usual readings", "the patient’s usual readings")
+    .replaceAll("your usual patterns", "the patient’s usual patterns")
+    .replaceAll("Your voice", "The patient’s voice")
+    .replaceAll("your voice", "the patient’s voice")
+    .replaceAll("you feel today", "the patient feels today")
+    .replaceAll(
+      "Worth checking in with how rested and how active you have been.",
+      "Consider reviewing recent activity, sleep, hydration, medications, and symptom context."
+    )
+    .replaceAll(
+      "This often shows up after extra stress, lighter sleep, or harder activity than usual.",
+      "This may reflect physiologic stress, sleep disruption, recovery burden, recent activity, or other clinical context."
+    )
+    .replaceAll(
+      "A small shift in the patient’s usual breathing pattern.",
+      "Consider correlation with respiratory symptoms, anxiety, activity, fever, or other clinical context."
+    )
+    .replaceAll(
+      "A small drift from the patient’s usual readings — worth a second look if it persists.",
+      "Consider correlation with respiratory symptoms, device fit, activity, and persistence over time."
+    )
+    .replaceAll(
+      "These wellness signals compare recent wearable and voice-pattern data with the patient’s usual baseline. They do not diagnose illness or replace medical advice.",
+      "Recent wearable and voice-pattern data are compared with the patient’s usual baseline for signal context only."
+    );
+}
+
+function KeyObservations({
+  patient,
+  vitals,
+  entities,
+  currentSignalInsight,
+  fusionSummary,
+  voiceDeviation,
+}) {
+  const signalEvidence =
+    currentSignalInsight?.overallStatus?.signalEvidence || [];
+
+  const hasChangedSignals = signalEvidence.length > 0;
+  const latestVoiceAt = patient?.latestSessionAt
+    ? new Date(patient.latestSessionAt)
+    : null;
+
+  const patientReportedText =
+    patient?.latestTranscriptSummary ||
+    patient?.latestPatientStatement ||
+    patient?.latestVoiceText ||
+    patient?.latestSessionText ||
+    null;
+
+  const extractedSymptoms = (entities || [])
+    .filter((entity) => entity.category === "MEDICAL_CONDITION")
+    .map((entity) => entity.text)
+    .filter(Boolean);
+
+  const reviewWindowLabel =
+    currentSignalInsight?.overallStatus?.temporalContext?.windowLabel ||
+    currentSignalInsight?.overallStatus?.reviewWindow?.label ||
+    "Current review window";
+
+  const vitalSignals = signalEvidence.filter((signal) => {
+    const id = String(signal.signal || signal.id || "").toLowerCase();
+    const label = String(signal.label || "").toLowerCase();
+
+    return (
+      id.includes("heart") ||
+      id.includes("hr") ||
+      id.includes("resp") ||
+      id.includes("rr") ||
+      id.includes("spo2") ||
+      id.includes("oxygen") ||
+      id.includes("temp") ||
+      id.includes("hrv") ||
+      label.includes("heart") ||
+      label.includes("resp") ||
+      label.includes("oxygen") ||
+      label.includes("spo") ||
+      label.includes("temp") ||
+      label.includes("hrv")
+    );
+  });
+
+  const voiceSignals = signalEvidence.filter((signal) => {
+    const id = String(signal.signal || signal.id || "").toLowerCase();
+    const label = String(signal.label || "").toLowerCase();
+
+    return (
+      id.includes("voice") ||
+      id.includes("speech") ||
+      id.includes("pause") ||
+      id.includes("tempo") ||
+      id.includes("hesitation") ||
+      label.includes("voice") ||
+      label.includes("speech") ||
+      label.includes("pause") ||
+      label.includes("tempo") ||
+      label.includes("hesitation")
+    );
+  });
+
+  const otherSignals = signalEvidence.filter(
+    (signal) =>
+      !vitalSignals.includes(signal) &&
+      !voiceSignals.includes(signal)
+  );
+
+  const hasVoiceContext =
+    latestVoiceAt ||
+    patientReportedText ||
+    extractedSymptoms.length > 0 ||
+    voiceSignals.length > 0 ||
+    voiceDeviation?.compared;
+
+  if (!hasChangedSignals && !hasVoiceContext) {
+    return (
+      <div className="key-observations-card">
+        <div className="key-observations-header">
+          <div>
+            <div className="key-observations-title">Key Observations</div>
+            <div className="key-observations-subtitle">
+              Descriptive observations appear when meaningful changes are detected across health signals.
+            </div>
+          </div>
+
+          <div className="key-observations-badge stable">
+            No noteworthy changes
+          </div>
+        </div>
+
+        <div className="key-observations-empty">
+          No noteworthy multi-signal changes were detected in the current review window.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="key-observations-card">
+      <div className="key-observations-header">
+        <div>
+          <div className="key-observations-title">Key Observations</div>
+          <div className="key-observations-subtitle">
+  {reviewWindowLabel} · Signals reviewed together in the current clinical context
+</div>
+        </div>
+
+        <div
+          className={
+            hasChangedSignals
+              ? "key-observations-badge attention"
+              : "key-observations-badge stable"
+          }
+        >
+          {hasChangedSignals ? "Noteworthy signal changes" : "No changed signal evidence"}
+        </div>
+      </div>
+           
+      <div className="observation-two-column">
+        <div className="observation-signal-panel">
+          <div className="observation-panel-title">
+            Vital Signal Trends
+          </div>
+
+          {vitalSignals.length > 0 ? (
+            <ul className="observation-list">
+              {vitalSignals.map((signal) => {
+                const text = clinicianizeText(
+                  signal.explanation ||
+                    signal.interpretation ||
+                    "Changed signal evidence detected."
+                );
+
+                const direction =
+                  signal.direction === "decreased" || /lower|below|drift/i.test(text)
+                    ? "↓"
+                    : signal.direction === "increased" || /higher|above|elevated/i.test(text)
+                    ? "↑"
+                    : "•";
+
+                const directionClass =
+                  direction === "↑"
+                    ? "signal-arrow-up"
+                    : direction === "↓"
+                    ? "signal-arrow-down"
+                    : "signal-arrow-neutral";
+
+                const conciseText = text
+                  .replace(`${signal.label} is `, "")
+                  .replace(`${signal.label} `, "")
+                  .replace(
+                    "noticeably higher than the patient’s usual baseline.",
+                    "above patient baseline."
+                  )
+                  .replace(
+                    "noticeably lower than the patient’s usual baseline.",
+                    "below patient baseline."
+                  )
+                  .replace(
+                    "noticeably higher than the patient’s baseline.",
+                    "above patient baseline."
+                  )
+                  .replace(
+                    "noticeably lower than the patient’s baseline.",
+                    "below patient baseline."
+                  );
+
+                return (
+                  <li
+                    key={signal.signal || signal.id || signal.label}
+                    className="observation-signal-item"
+                  >
+                    <span className={`signal-arrow ${directionClass}`}>
+                      {direction}
+                    </span>
+
+                    <span>
+                      <strong>{signal.label}:</strong>{" "}
+                      {conciseText}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="observation-empty-line">
+              No noteworthy vital-sign trend changes detected in this window.
+            </div>
+          )}
+        </div>
+
+        <div className="observation-voice-panel">
+          <div className="observation-panel-title">
+            Voice / Patient-Reported Context
+          </div>
+
+          {patientReportedText ? (
+            <div className="voice-quote">
+              “{patientReportedText}”
+            </div>
+          ) : extractedSymptoms.length > 0 ? (
+            <div className="voice-quote">
+              “{extractedSymptoms.join(", ")}”
+            </div>
+          ) : latestVoiceAt ? (
+            <div className="voice-quote muted-voice">
+              Voice entry captured. No symptom quote available.
+            </div>
+          ) : (
+            <div className="observation-empty-line">
+              No voice entry is available in this review window.
+            </div>
+          )}
+
+          {voiceSignals.length > 0 && (
+            <ul className="observation-list voice-signal-list">
+              {voiceSignals.map((signal) => (
+                <li key={signal.signal || signal.id || signal.label}>
+                  <strong>{signal.label}:</strong>{" "}
+                  {clinicianizeText(
+                    signal.explanation ||
+                      signal.interpretation ||
+                      "Voice signal change detected."
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!voiceSignals.length && voiceDeviation?.compared && (
+            <div className="observation-empty-line">
+              Voice compared with baseline: {titleCase(voiceDeviation.deviationLevel)}.
+            </div>
+          )}
+
+          {!voiceDeviation?.compared && (
+            <div className="observation-empty-line">
+              Voice baseline comparison is not yet available.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {otherSignals.length > 0 && (
+        <div className="observation-other-panel">
+          <div className="observation-panel-title">
+            Additional Signal Context
+          </div>
+
+          <ul className="observation-list">
+            {otherSignals.map((signal) => (
+              <li key={signal.signal || signal.id || signal.label}>
+                <strong>{signal.label}:</strong>{" "}
+                {clinicianizeText(
+                  signal.explanation ||
+                    signal.interpretation ||
+                    "Additional signal context detected."
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {fusionSummary?.fusionSummary?.signalAlignment?.interpretation && (
+        <div className="observation-alignment-note">
+          <strong>Signal alignment:</strong>{" "}
+          {clinicianizeText(
+            fusionSummary.fusionSummary.signalAlignment.interpretation
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+  
 // ─── Time-Aligned Insights ──────────────────────────────────────────────────
 function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
   const [timeWindow, setTimeWindow] = useState("1h");
   const [activeParams, setActiveParams] = useState(["HR", "HRV", "RR", "SpO2", "Temp"]);
   const [draggingParam, setDraggingParam] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [selectedTime, setSelectedTime] = useState(null);
+
+  const METRIC_ALIASES = useMemo(() => ({
+    heart_rate: "heart_rate",
+    "heart rate": "heart_rate",
+    heartrate: "heart_rate",
+    heart_rate_bpm: "heart_rate",
+    hr: "heart_rate",
+    bpm: "heart_rate",
+    HeartRate: "heart_rate",
+    "Heart Rate": "heart_rate",
+    HKQuantityTypeIdentifierHeartRate: "heart_rate",
+    hkquantitytypeidentifierheartrate: "heart_rate",
+
+    hrv: "hrv_sdnn",
+    hrv_sdnn: "hrv_sdnn",
+    sdnn: "hrv_sdnn",
+    heart_rate_variability: "hrv_sdnn",
+    "heart rate variability": "hrv_sdnn",
+    heart_rate_variability_sdnn: "hrv_sdnn",
+    HeartRateVariabilitySDNN: "hrv_sdnn",
+    "Heart Rate Variability": "hrv_sdnn",
+    HKQuantityTypeIdentifierHeartRateVariabilitySDNN: "hrv_sdnn",
+    hkquantitytypeidentifierheartratevariabilitysdnn: "hrv_sdnn",
+
+    respiratory_rate: "respiratory_rate",
+    "respiratory rate": "respiratory_rate",
+    respiration_rate: "respiratory_rate",
+    "respiration rate": "respiratory_rate",
+    breathing_rate: "respiratory_rate",
+    rr: "respiratory_rate",
+    brpm: "respiratory_rate",
+    RespirationRate: "respiratory_rate",
+    "Respiratory Rate": "respiratory_rate",
+    HKQuantityTypeIdentifierRespiratoryRate: "respiratory_rate",
+    hkquantitytypeidentifierrespiratoryrate: "respiratory_rate",
+
+    spo2: "spo2",
+    sp_o2: "spo2",
+    SpO2: "spo2",
+    "SpO2": "spo2",
+    "SpO₂": "spo2",
+    oxygen_saturation: "spo2",
+    "oxygen saturation": "spo2",
+    oxygen_saturation_percent: "spo2",
+    oxygen_saturation_percentage: "spo2",
+    peripheral_oxygen_saturation: "spo2",
+    "Oxygen Saturation": "spo2",
+    HKQuantityTypeIdentifierOxygenSaturation: "spo2",
+    hkquantitytypeidentifieroxygensaturation: "spo2",
+
+    body_temperature: "body_temperature",
+    "body temperature": "body_temperature",
+    body_temp: "body_temperature",
+    temperature: "body_temperature",
+    temp: "body_temperature",
+    "Temperature": "body_temperature",
+    HKQuantityTypeIdentifierBodyTemperature: "body_temperature",
+    hkquantitytypeidentifierbodytemperature: "body_temperature",
+
+    wrist_temperature: "wrist_temperature",
+    "wrist temperature": "wrist_temperature",
+    wrist_temp: "wrist_temperature",
+    apple_sleeping_wrist_temperature: "wrist_temperature",
+    sleeping_wrist_temperature: "wrist_temperature",
+    "Apple Sleeping Wrist Temperature": "wrist_temperature",
+    HKQuantityTypeIdentifierAppleSleepingWristTemperature: "wrist_temperature",
+    hkquantitytypeidentifierapplesleepingwristtemperature: "wrist_temperature",
+  }), []);
 
   const ALL_PARAMS = useMemo(() => [
-  {
-    id: "HR",
-    label: "Heart Rate",
-    unit: "bpm",
-    color: "#EF4444",
-    vitalType: "heart_rate",
-    yAxis: 0,
-    shortLabel: "HR",
-  },
-  {
-  id: "HRV",
-  label: "Heart Rate Variability",
-  unit: "ms",
-  color: "#14B8A6",
-  vitalType: "hrv_sdnn",
-  yAxis: 0,
-  shortLabel: "HRV",
-},
-  {
-    id: "RR",
-    label: "Resp. Rate",
-    unit: "br/min",
-    color: "#06B6D4",
-    vitalType: "respiratory_rate",
-    yAxis: 0,
-    shortLabel: "RR",
-  },
-  {
-  id: "SpO2",
-  label: "SpO₂",
-  unit: "%",
-  color: "#8B5CF6",
-  vitalType: "spo2",
-  yAxis: 1,
-  shortLabel: "SpO₂",
-},
-  {
-    id: "Temp",
-    label: "Temperature",
-    unit: "°C",
-    color: "#F59E0B",
-    vitalType: "wrist_temperature",
-    yAxis: 1,
-    shortLabel: "Temp",
-  },
-], []);
-
-  const windowMs = useMemo(
+    {
+      id: "HR",
+      label: "Heart Rate",
+      unit: "bpm",
+      color: "#EF4444",
+      vitalTypes: ["heart_rate", "hr", "HeartRate"],
+      yAxis: 0,
+      shortLabel: "HR",
+    },
+    {
+      id: "HRV",
+      label: "Heart Rate Variability",
+      unit: "ms",
+      color: "#14B8A6",
+      vitalTypes: ["hrv_sdnn", "hrv", "heart_rate_variability", "HeartRateVariabilitySDNN"],
+      yAxis: 0,
+      shortLabel: "HRV",
+    },
+    {
+      id: "RR",
+      label: "Resp. Rate",
+      unit: "br/min",
+      color: "#06B6D4",
+      vitalTypes: ["respiratory_rate", "rr", "RespirationRate"],
+      yAxis: 0,
+      shortLabel: "RR",
+    },
+    {
+      id: "SpO2",
+      label: "SpO₂",
+      unit: "%",
+      color: "#8B5CF6",
+      vitalTypes: ["spo2", "SpO2", "oxygen_saturation", "oxygen_saturation_percent"],
+      yAxis: 1,
+      shortLabel: "SpO₂",
+    },
+    {
+      id: "Temp",
+      label: "Temperature",
+      unit: "°C",
+      color: "#F59E0B",
+      vitalTypes: ["wrist_temperature", "body_temperature", "temperature", "temp", "apple_sleeping_wrist_temperature"],
+      yAxis: 1,
+      shortLabel: "Temp",
+    },
+  ], []);
+    const windowMs = useMemo(
     () => ({ "1h": 1, "6h": 6, "12h": 12, "24h": 24, "7d": 168 }[timeWindow] * 3600 * 1000),
     [timeWindow]
   );
 
-  // Stable demo data so the chart looks populated when no wearable is connected
-  
- const now = useMemo(() => {
-  const latestVitalTime = Math.max(
-    ...((vitals || [])
-      .map((v) => new Date(v.timestamp).getTime())
-      .filter((t) => Number.isFinite(t)))
-  );
+  function getVitalTimestamp(v) {
+    return (
+      v?.timestamp ||
+      v?.observedAt ||
+      v?.observed_at ||
+      v?.startDate ||
+      v?.start_date ||
+      v?.endDate ||
+      v?.end_date ||
+      v?.createdAt ||
+      v?.created_at ||
+      v?.updatedAt ||
+      v?.updated_at ||
+      v?.date
+    );
+  }
 
-  return Number.isFinite(latestVitalTime)
-    ? latestVitalTime
-    : Date.now();
-}, [vitals]);
+  function getVitalType(v) {
+    return (
+      v?.type ||
+      v?.metric ||
+      v?.metricType ||
+      v?.metric_type ||
+      v?.name ||
+      v?.vitalType ||
+      v?.vital_type ||
+      v?.code ||
+      v?.identifier ||
+      v?.quantityType ||
+      v?.quantity_type
+    );
+  }
 
-  const mainSeries = useMemo(() => {
-    return ALL_PARAMS
-      .filter(p => activeParams.includes(p.id))
-      .map(param => {
-        const rawData = (vitals || [])
-  .filter((v) => {
-    const t = new Date(v.timestamp).getTime();
+  function getVitalValue(v) {
+    return (
+      v?.value ??
+      v?.numericValue ??
+      v?.numeric_value ??
+      v?.quantity ??
+      v?.amount ??
+      v?.measurement ??
+      v?.data?.value ??
+      v?.sample?.value
+    );
+  }
+
+  function normalizeType(type) {
+    if (!type) return null;
+
+    const raw = String(type);
+    const lower = raw.toLowerCase();
 
     return (
-      v.type === param.vitalType &&
-      Number.isFinite(t) &&
-      t >= now - windowMs &&
-      t <= now
+      METRIC_ALIASES[raw] ||
+      METRIC_ALIASES[lower] ||
+      lower
     );
-  })
-  .map((v) => [
-    new Date(v.timestamp).getTime(),
-    parseFloat(v.value),
-  ])
-  .sort((a, b) => a[0] - b[0]);
-        
-const data = rawData;
+  }
+
+  function normalizeValue(paramId, value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+
+    // Some pipelines store SpO₂ as 0.97 instead of 97.
+    if (paramId === "SpO2" && n > 0 && n <= 1) {
+      return n * 100;
+    }
+
+    return n;
+  }
+
+  const now = useMemo(() => {
+    const latestVitalTime = Math.max(
+      ...((vitals || [])
+        .map((v) => new Date(getVitalTimestamp(v)).getTime())
+        .filter((t) => Number.isFinite(t)))
+    );
+
+    return Number.isFinite(latestVitalTime)
+      ? latestVitalTime
+      : Date.now();
+  }, [vitals]);
+
+      const mainSeries = useMemo(() => {
+    return ALL_PARAMS
+      .filter((p) => activeParams.includes(p.id))
+      .map((param) => {
+        const acceptedTypes = new Set(
+          param.vitalTypes
+            .map((type) => normalizeType(type))
+            .filter(Boolean)
+        );
+
+        const data = (vitals || [])
+          .map((v) => {
+            const rawType = getVitalType(v);
+            const normalizedType = normalizeType(rawType);
+
+            const timestamp = getVitalTimestamp(v);
+            const t = new Date(timestamp).getTime();
+
+            const rawValue = getVitalValue(v);
+            const y = normalizeValue(param.id, rawValue);
+
+            if (
+              !acceptedTypes.has(normalizedType) ||
+              !Number.isFinite(t) ||
+              y === null ||
+              t < now - windowMs ||
+              t > now
+            ) {
+              return null;
+            }
+
+            return {
+              x: t,
+              y,
+              metricId: param.id,
+              unit: param.unit,
+              rawType,
+              normalizedType,
+              rawValue,
+              raw: v,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.x - b.x);
 
         return {
-          name: `${param.shortLabel} (${param.unit})`,
-          data,
-          color: param.color,
-          yAxis: param.yAxis,
-          type: data.length < 2 ? "scatter" : "spline",
-          lineWidth: data.length < 2 ? 0 : 2,
-          dashStyle:
-  data.length < 5
-    ? "ShortDash"
-    : "Solid",
-          marker: { enabled: true, radius: 4, symbol: "circle" },
-        };
+  name: `${param.shortLabel} (${param.unit})`,
+  metricId: param.id,
+  unit: param.unit,
+  data,
+  color: param.color,
+  yAxis: param.yAxis,
+  type: data.length < 2 ? "scatter" : "spline",
+  lineWidth: data.length < 2 ? 0 : 2,
+  dashStyle: "Solid",
+  marker: { enabled: true, radius: 4, symbol: "circle" },
+};
       });
   }, [ALL_PARAMS, activeParams, vitals, windowMs, now]);
+
+    const baselinePlotLines = useMemo(() => {
+    const possibleBaselines =
+      baseline?.vitalsBaseline ||
+      baseline?.vitals ||
+      baseline?.baselineVitals ||
+      baseline?.physiology ||
+      {};
+
+    function getBaselineForParam(param) {
+      const candidates = [
+        param.id,
+        param.shortLabel,
+        ...(param.vitalTypes || []),
+      ];
+
+      for (const key of candidates) {
+        const direct = possibleBaselines?.[key];
+        const nested =
+          possibleBaselines?.[key]?.value ??
+          possibleBaselines?.[key]?.mean ??
+          possibleBaselines?.[key]?.baseline;
+
+        const value = nested ?? direct;
+
+        if (Number.isFinite(Number(value))) {
+          return Number(value);
+        }
+      }
+
+      return null;
+    }
+
+    return ALL_PARAMS
+      .filter((param) => activeParams.includes(param.id))
+      .map((param) => {
+        const value = getBaselineForParam(param);
+        if (!Number.isFinite(value)) return null;
+
+        return {
+          yAxis: param.yAxis,
+          plotLine: {
+            value,
+            color: `${param.color}99`,
+            dashStyle: "Dash",
+            width: 1,
+            zIndex: 3,
+            label: {
+              text: `${param.shortLabel} baseline`,
+              style: {
+                color: "#94A3B8",
+                fontSize: "10px",
+              },
+            },
+          },
+        };
+      })
+      .filter(Boolean);
+  }, [ALL_PARAMS, activeParams, baseline]);
 
   // VDI ──────────────────────────────────────────────────────────────────────
   const VDI_SCORES = { stable: 8, mild: 38, moderate: 62, significant: 88 };
@@ -242,51 +949,116 @@ const data = rawData;
   }, [voiceDeviation, hasVdiData]);
 
   // Highcharts options ────────────────────────────────────────────────────────
-  const voiceCaptureEvents = useMemo(() => {
-  const latestSessionAt = patient?.latestSessionAt;
+    const voiceCaptureEvents = useMemo(() => {
+    const latestSessionAt = patient?.latestSessionAt;
 
-  const hasVoiceCapture =
-    patient?.latestSessionId &&
-    patient?.latestSessionAt &&
-    patient?.latestEntities?.length;
+    const hasVoiceCapture =
+      patient?.latestSessionId &&
+      patient?.latestSessionAt &&
+      patient?.latestEntities?.length;
 
-  if (!hasVoiceCapture || !latestSessionAt) {
-    return [];
-  }
+    if (!hasVoiceCapture || !latestSessionAt) {
+      return [];
+    }
 
-  const t = new Date(latestSessionAt).getTime();
+    const t = new Date(latestSessionAt).getTime();
 
-  if (
-    !Number.isFinite(t) ||
-    t < now - windowMs ||
-    t > now
-  ) {
-    return [];
-  }
+    if (
+      !Number.isFinite(t) ||
+      t < now - windowMs ||
+      t > now
+    ) {
+      return [];
+    }
 
-  return [
-    {
-      time: t,
-      label: "Voice capture event",
+    return [
+      {
+        time: t,
+        label: "Voice capture event",
 
-      symptoms:
-        patient?.latestEntities
-          ?.filter(
-            (e) => e.category === "MEDICAL_CONDITION"
-          )
-          ?.map((e) => e.text) || [],
+        symptoms:
+          patient?.latestEntities
+            ?.filter(
+              (e) => e.category === "MEDICAL_CONDITION"
+            )
+            ?.map((e) => e.text) || [],
 
-      voiceSignals:
-        voiceDeviation?.features
-          ?.filter(
-            (f) => f.severity !== "stable"
-          )
-          ?.map((f) => f.label) || [],
-    },
-  ];
-}, [patient, voiceDeviation, now, windowMs]);
+        voiceSignals:
+          voiceDeviation?.features
+            ?.filter(
+              (f) => f.severity !== "stable"
+            )
+            ?.map((f) => f.label) || [],
+      },
+    ];
+  }, [patient, voiceDeviation, now, windowMs]);
+
+  const selectedSnapshot = useMemo(() => {
+    if (!selectedTime) return null;
+
+    const toleranceMs =
+      timeWindow === "1h"
+        ? 8 * 60 * 1000
+        : timeWindow === "6h"
+        ? 20 * 60 * 1000
+        : timeWindow === "12h"
+        ? 40 * 60 * 1000
+        : timeWindow === "24h"
+        ? 90 * 60 * 1000
+        : 12 * 60 * 60 * 1000;
+
+    const values = mainSeries
+      .filter((series) => series.metricId)
+      .map((series) => {
+        const closest = (series.data || []).reduce((best, point) => {
+          const delta = Math.abs(point.x - selectedTime);
+
+          if (!best || delta < best.delta) {
+            return { point, delta };
+          }
+
+          return best;
+        }, null);
+
+        if (!closest || closest.delta > toleranceMs) {
+          return {
+            label: series.name,
+            value: "—",
+            unit: series.unit || "",
+            color: series.color,
+          };
+        }
+
+        return {
+          label: series.name,
+          value:
+            typeof closest.point.y === "number"
+              ? closest.point.y.toFixed(series.metricId === "SpO2" ? 0 : 1)
+              : closest.point.y,
+          unit: series.unit || "",
+          color: series.color,
+        };
+      });
+
+    const nearbyVoiceEvent = voiceCaptureEvents.find(
+      (event) => Math.abs(event.time - selectedTime) <= toleranceMs
+    );
+
+    return {
+      time: selectedTime,
+      values,
+      voiceEvent: nearbyVoiceEvent || null,
+      voiceDeviation,
+    };
+  }, [
+    selectedTime,
+    mainSeries,
+    voiceCaptureEvents,
+    voiceDeviation,
+    timeWindow,
+  ]);
   const mainChartOptions = useMemo(() => ({
-    chart: {
+            chart: {
       type: "spline",
       backgroundColor: "#0F172A",
       plotBackgroundColor: "#0F172A",
@@ -294,6 +1066,34 @@ const data = rawData;
       height: 280,
       marginRight: 80,
       animation: false,
+      events: {
+        click: function (event) {
+          const clickedTime = event?.xAxis?.[0]?.value;
+
+          if (!Number.isFinite(clickedTime)) return;
+
+          const allPoints = mainSeries
+            .flatMap((series) => series.data || [])
+            .filter((point) => Number.isFinite(point?.x));
+
+          if (!allPoints.length) {
+            setSelectedTime(clickedTime);
+            return;
+          }
+
+          const nearest = allPoints.reduce((best, point) => {
+            const delta = Math.abs(point.x - clickedTime);
+
+            if (!best || delta < best.delta) {
+              return { point, delta };
+            }
+
+            return best;
+          }, null);
+
+          setSelectedTime(nearest?.point?.x || clickedTime);
+        },
+      },
     },
     title: { text: null },
     credits: { enabled: false },
@@ -309,6 +1109,11 @@ xAxis: {
   gridLineColor: "#1E293B",
   lineColor: "#334155",
   tickColor: "#334155",
+  crosshair: {
+    width: 1,
+    color: "#94A3B8",
+    dashStyle: "ShortDash",
+  },
   labels: {
     style: { color: "#64748B", fontSize: "11px" },
     formatter: function () {
@@ -319,52 +1124,79 @@ xAxis: {
       return Highcharts.dateFormat("%H:%M", this.value);
     },
   },
-  plotLines: voiceCaptureEvents.map((event) => ({
-    value: event.time,
-    color: "#22C55E",
-    width: 1,
-    dashStyle: "ShortDash",
-    zIndex: 10,
+  plotLines: [
+    ...voiceCaptureEvents.map((event) => ({
+      value: event.time,
+      color: "#22C55E",
+      width: 1,
+      dashStyle: "ShortDash",
+      zIndex: 10,
 
-    label: {
-      useHTML: true,
-      text: `
-        <div style="
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          gap:4px;
-        ">
+      label: {
+        useHTML: true,
+        text: `
           <div style="
-            width:10px;
-            height:10px;
-            border-radius:999px;
-            background:#22C55E;
-            border:2px solid #0F172A;
-            box-shadow:0 0 0 2px rgba(34,197,94,.25);
-          "></div>
-
-          <div style="
-            color:#22C55E;
-            font-size:10px;
-            font-weight:600;
-            white-space:nowrap;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:4px;
           ">
-            Voice capture
+            <div style="
+              width:10px;
+              height:10px;
+              border-radius:999px;
+              background:#22C55E;
+              border:2px solid #0F172A;
+              box-shadow:0 0 0 2px rgba(34,197,94,.25);
+            "></div>
+
+            <div style="
+              color:#22C55E;
+              font-size:10px;
+              font-weight:600;
+              white-space:nowrap;
+            ">
+              Voice capture
+            </div>
           </div>
-        </div>
-      `,
-      rotation: 0,
-      y: 18,
-    },
-  })),
+        `,
+        rotation: 0,
+        y: 18,
+      },
+    })),
+
+    ...(selectedTime
+      ? [
+          {
+            value: selectedTime,
+            color: "#F8FAFC",
+            width: 1,
+            dashStyle: "Solid",
+            zIndex: 12,
+            label: {
+              text: "Selected time",
+              rotation: 0,
+              y: 14,
+              style: {
+                color: "#F8FAFC",
+                fontSize: "10px",
+                fontWeight: "700",
+              },
+            },
+          },
+        ]
+      : []),
+  ],
 },
-    yAxis: [
+        yAxis: [
       {
-        title: { text: "HR / RR", style: { color: "#64748B", fontSize: "11px" } },
+        title: { text: "HR / HRV / RR", style: { color: "#64748B", fontSize: "11px" } },
         gridLineColor: "#1E293B",
         labels: { style: { color: "#64748B", fontSize: "11px" } },
         min: 0,
+        plotLines: baselinePlotLines
+          .filter((item) => item.yAxis === 0)
+          .map((item) => item.plotLine),
       },
       {
         title: { text: "SpO₂ / Temp", style: { color: "#64748B", fontSize: "11px" } },
@@ -372,28 +1204,89 @@ xAxis: {
         labels: { style: { color: "#64748B", fontSize: "11px" } },
         opposite: true,
         min: 0,
+        plotLines: baselinePlotLines
+          .filter((item) => item.yAxis === 1)
+          .map((item) => item.plotLine),
       },
     ],
-    tooltip: {
-  backgroundColor: "#1E293B",
-  borderColor: "#334155",
-  style: { color: "#F8FAFC" },
-  xDateFormat: timeWindow === "7d" ? "%b %e, %H:%M" : "%H:%M",
-  shared: false,
 
-  positioner: function (labelWidth, labelHeight, point) {
-    return {
-      x: Math.min(
-        point.plotX + 180,
-        this.chart.chartWidth - labelWidth - 20
-      ),
-      y: Math.max(point.plotY - 80, 20),
-    };
+          tooltip: {
+      backgroundColor: "#1E293B",
+      borderColor: "#334155",
+      style: { color: "#F8FAFC" },
+      shared: false,
+      useHTML: true,
+      snap: 18,
+      followPointer: false,
+      xDateFormat: timeWindow === "7d" ? "%b %e, %H:%M" : "%H:%M",
+
+      formatter: function () {
+        const metricId =
+          this.point?.metricId ||
+          this.series?.userOptions?.metricId;
+
+        const param = ALL_PARAMS.find((p) => p.id === metricId);
+        const label = param?.label || this.series.name;
+        const unit =
+          this.point?.unit ||
+          this.series?.userOptions?.unit ||
+          param?.unit ||
+          "";
+
+        const value =
+          typeof this.y === "number"
+            ? this.y.toFixed(metricId === "SpO2" ? 0 : 1)
+            : this.y;
+
+        return `
+          <div style="font-size:12px;min-width:160px;">
+            <strong>${label}</strong><br/>
+            <span style="color:#94A3B8;">
+              ${Highcharts.dateFormat("%b %e, %I:%M %p", this.x)}
+            </span><br/>
+            <span style="font-size:13px;font-weight:800;">
+              ${value} ${unit}
+            </span>
+          </div>
+        `;
+      },
+
+      positioner: function (labelWidth, labelHeight, point) {
+        return {
+          x: Math.min(
+            point.plotX + 180,
+            this.chart.chartWidth - labelWidth - 20
+          ),
+          y: Math.max(point.plotY - 80, 20),
+        };
+      },
+    },
+
+        plotOptions: {
+  series: {
+    stickyTracking: true,
+    findNearestPointBy: "xy",
+    cursor: "crosshair",
+    point: {
+      events: {
+        click: function () {
+          if (Number.isFinite(this.x)) {
+            setSelectedTime(this.x);
+          }
+        },
+      },
+    },
+    states: {
+      hover: {
+        enabled: true,
+        lineWidthPlus: 1,
+      },
+    },
+  },
+  spline: {
+    marker: { enabled: true, radius: 4 },
   },
 },
-    plotOptions: {
-      spline: { marker: { enabled: true, radius: 4 } },
-    },
     series: [
   ...mainSeries,
   {
@@ -401,12 +1294,12 @@ xAxis: {
     type: "scatter",
     data: voiceCaptureEvents.map((event) => ({
       x: event.time,
-      y:
-  mainSeries?.[0]?.data?.length
-    ? mainSeries[0].data[
-        Math.floor(mainSeries[0].data.length / 2)
-      ]?.[1] ?? 0
-    : 0,
+            y:
+        mainSeries?.[0]?.data?.length
+          ? mainSeries[0].data[
+              Math.floor(mainSeries[0].data.length / 2)
+            ]?.y ?? 0
+          : 0,
       label: event.label,
       symptoms: event.symptoms,
       voiceSignals: event.voiceSignals,
@@ -458,7 +1351,16 @@ tooltip: {
 },
 }, // closes scatter series
 ], // closes series array
-}), [mainSeries, voiceCaptureEvents, timeWindow, windowMs, now]);
+}), [
+  ALL_PARAMS,
+  mainSeries,
+  voiceCaptureEvents,
+  baselinePlotLines,
+  selectedTime,
+  timeWindow,
+  windowMs,
+  now,
+]);
 
   const vdiChartOptions = useMemo(() => ({
     chart: {
@@ -691,15 +1593,80 @@ tooltip: {
         </div>
       </div>
 
+            {selectedSnapshot ? (
+  <div className="selected-time-snapshot">
+    <div className="selected-time-header">
+      <div>
+        <strong>Selected Time Snapshot</strong>
+        <div className="selected-time-subtitle">
+          {Highcharts.dateFormat("%b %e, %I:%M %p", selectedSnapshot.time)}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="selected-time-clear"
+        onClick={() => setSelectedTime(null)}
+      >
+        Clear
+      </button>
+    </div>
+
+    <div className="selected-time-values">
+      {selectedSnapshot.values.map((item) => (
+        <div key={item.label} className="selected-time-value">
+          <span
+            className="selected-time-dot"
+            style={{ background: item.color }}
+          />
+          <span className="selected-time-label">{item.label}</span>
+          <strong>
+            {item.value} {item.unit}
+          </strong>
+        </div>
+      ))}
+    </div>
+
+    <div className="selected-time-voice">
+      <strong>Voice context:</strong>{" "}
+      {selectedSnapshot.voiceEvent ? (
+        <>
+          Voice capture near this time
+          {selectedSnapshot.voiceEvent.symptoms?.length
+            ? ` · Reported: ${selectedSnapshot.voiceEvent.symptoms.join(", ")}`
+            : ""}
+          {selectedSnapshot.voiceEvent.voiceSignals?.length
+            ? ` · Voice signals: ${selectedSnapshot.voiceEvent.voiceSignals.join(", ")}`
+            : ""}
+        </>
+      ) : selectedSnapshot.voiceDeviation?.compared ? (
+        <>
+          VDI available for latest voice capture:{" "}
+          {titleCase(selectedSnapshot.voiceDeviation.deviationLevel)}
+        </>
+      ) : (
+        <>No time-aligned voice data available at this selected time.</>
+      )}
+    </div>
+  </div>
+) : (
+  <div className="selected-time-snapshot selected-time-snapshot-empty">
+    <strong>Selected Time Snapshot</strong>
+    <span>
+      Click any point or time on the trend chart to pin a vertical review line and compare displayed parameters.
+    </span>
+  </div>
+)}
+
       {/* ── VDI sub-chart ── */}
       <div style={{ borderTop: "1px solid #1E293B" }}>
         {hasVdiData && vdiBarData ? (
           <div style={{ paddingLeft: 136 }}>
             <HighchartsReact
-  key={`vdi-${timeWindow}-${now}`}
-  highcharts={Highcharts}
-  options={vdiChartOptions}
-/>
+              key={`vdi-${timeWindow}-${now}`}
+              highcharts={Highcharts}
+              options={vdiChartOptions}
+            />
           </div>
         ) : (
           <div style={{
@@ -717,7 +1684,7 @@ tooltip: {
           </div>
         )}
       </div>
-
+            
       {/* ── Footer legend ── */}
       <div style={{
         padding: "8px 18px 12px 154px",
@@ -759,12 +1726,14 @@ export default function PatientDetail({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [baseline, setBaseline] = useState(null);
+  const [patientVitals, setPatientVitals] = useState([]);
   const [showBaselineDetails, setShowBaselineDetails] = useState(false);
   const [showBaselineStatus, setShowBaselineStatus] = useState(false);
 
   const [showTemporalTrajectory, setShowTemporalTrajectory] = useState(false);
   const [showReportedDetails, setShowReportedDetails] = useState(false);
   const [showVitals, setShowVitals] = useState(false);
+  const [vitalsParameterFilter, setVitalsParameterFilter] = useState("all");
 
   const [fusionSummary, setFusionSummary] = useState(null);
   const [fusionLoading, setFusionLoading] = useState(false);
@@ -794,9 +1763,31 @@ export default function PatientDetail({
   fetchPatient({ patientId, clinicianKey, clinicId }),
   fetchPatientBaseline({ patientId, clinicianKey, clinicId }),
 ])
-  .then(([patientData, baselineData]) => {
+  .then(async ([patientData, baselineData]) => {
   setData(patientData);
   setBaseline(baselineData);
+
+  const resolvedPatient =
+    patientData?.patient || patientData || {};
+
+  const resolvedPatientId =
+    resolvedPatient?.patientId ||
+    resolvedPatient?.id ||
+    patientId;
+
+  const resolvedSubjectUid =
+    resolvedPatient?.subjectUid ||
+    patientData?.subjectUid ||
+    patientData?.patient?.subjectUid;
+
+  const vitalsData = await fetchPatientVitals({
+    patientId: resolvedPatientId,
+    subjectUid: resolvedSubjectUid,
+    clinicianKey,
+    clinicId,
+  });
+
+  setPatientVitals(vitalsData);
 
   loadFusionSummary();
   loadTemporalTimeline();
@@ -958,7 +1949,27 @@ async function handleToggleTranscript() {
   }
   if (!data) return null;
 
-  const { patient, vitals } = data;
+  const { patient } = data;
+
+  const vitals =
+  patientVitals.length > 0
+    ? patientVitals
+    : Array.isArray(data?.vitals)
+    ? data.vitals
+    : Array.isArray(data?.patient?.vitals)
+    ? data.patient.vitals
+    : [];
+
+const vitalParameterOptions = Array.from(
+  new Set(vitals.map((v) => getVitalDisplayLabel(v)).filter(Boolean))
+).sort();
+
+const filteredVitals =
+  vitalsParameterFilter === "all"
+    ? vitals
+    : vitals.filter(
+        (v) => getVitalDisplayLabel(v) === vitalsParameterFilter
+      );
   const entities = patient.latestEntities || [];
   const buckets = DISPLAY_CATEGORIES.map(({ key, label }) => ({
     key,
@@ -988,6 +1999,25 @@ const currentReviewWindow =
 
 const hasCurrentSignalEvidence =
   currentSignalInsight?.overallStatus?.signalEvidence?.length > 0;
+
+const hasVoiceBaseline =
+  Boolean(baseline?.voiceBaseline?.exists);
+
+const hasVoiceDeviationComparison =
+  Boolean(voiceDeviation?.compared);
+
+const hasTemporalWindows =
+  Array.isArray(temporalTimeline?.windows) &&
+  temporalTimeline.windows.length >= 2;
+
+const hasValidTemporalSummary =
+  Boolean(temporalTimeline?.temporalSummary);
+
+const canShowTemporalTrajectory =
+  hasVoiceBaseline &&
+  hasVoiceDeviationComparison &&
+  hasTemporalWindows &&
+  hasValidTemporalSummary;
 
   return (
     <div className="page">
@@ -1037,13 +2067,18 @@ const hasCurrentSignalEvidence =
           <strong>Clinical Significance:</strong>
 
           <div
-            style={{
-              marginTop: 6,
-              lineHeight: 1.5,
-            }}
-          >
-            {fusionSummary.fusionSummary.soWhat}
-          </div>
+  style={{
+    marginTop: 6,
+    lineHeight: 1.5,
+  }}
+>
+  {clinicianizeText(fusionSummary.fusionSummary.soWhat)
+  .replace(
+    "This does not diagnose a condition, but it may help prioritize timely clinician review.",
+    ""
+  )
+  .trim()}
+</div>
         </div>
 
         <div style={{ marginBottom: 12 }}>
@@ -1080,17 +2115,33 @@ const hasCurrentSignalEvidence =
     Time-Aligned Insights
   </div>
   <TimeAlignedInsights
-  vitals={vitals}
-  voiceDeviation={voiceDeviation}
-  baseline={baseline}
-  patient={patient}
-/>
+    vitals={vitals}
+    voiceDeviation={voiceDeviation}
+    baseline={baseline}
+    patient={patient}
+  />
 </section>
 
-{/* ── Fusion Signal Intelligence ───────────────────────────── */}
+{/* ── Key Observations ─────────────────────────────────────────── */}
+<section className="detail-section">
+  <KeyObservations
+    patient={patient}
+    vitals={vitals}
+    entities={entities}
+    currentSignalInsight={currentSignalInsight}
+    fusionSummary={fusionSummary}
+    voiceDeviation={voiceDeviation}
+  />
+</section>
+
+{/* ── What Changed Together ───────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
-    Fusion Signal Intelligence
+    What Changed Together?
+  </div>
+
+  <div className="muted" style={{ marginTop: -4, marginBottom: 10, fontSize: 12 }}>
+    Concordance between patient-reported context, voice features, and physiologic signals.
   </div>
 
   <div className="detail-card">
@@ -1266,78 +2317,6 @@ const hasCurrentSignalEvidence =
 
         <div
           style={{
-            marginTop: 16,
-            paddingTop: 14,
-            borderTop: "1px solid #E5E7EB",
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 800,
-              marginBottom: 8,
-            }}
-          >
-            What changed together?
-          </div>
-
-          <div style={{ display: "grid", gap: 8 }}>
-            {currentSignalInsight.overallStatus.signalEvidence?.length ? (
-  currentSignalInsight.overallStatus.signalEvidence.map(
-    (signal) => (
-      <div
-        key={signal.signal}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 12,
-          padding: "9px 11px",
-          borderRadius: 10,
-          background: "#111827",
-          border: "1px solid #334155",
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 700 }}>
-            {signal.label}
-          </div>
-
-          <div
-            className="muted"
-            style={{
-              fontSize: 12,
-              marginTop: 2,
-              color: "#94A3B8",
-            }}
-          >
-            {signal.explanation}
-          </div>
-        </div>
-
-        <div
-          className="muted"
-          style={{
-            fontSize: 12,
-            textAlign: "right",
-            minWidth: 120,
-            color: "#94A3B8",
-          }}
-        >
-          {titleCase(signal.magnitude)} ·{" "}
-          {titleCase(signal.direction)}
-        </div>
-      </div>
-    )
-  )
-) : (
-              <div className="empty-state-small">
-                No changed signal evidence detected.
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div
-          style={{
             marginTop: 14,
             padding: 14,
             borderRadius: 12,
@@ -1383,75 +2362,6 @@ const hasCurrentSignalEvidence =
     )}
   </div>
 </section>
-{hasCurrentSignalEvidence && (
-<>
-{/* ── Current Review Window ───────────────────────────────────── */}
-<section className="detail-section">
-  <div className="detail-section-title">
-    Current Review Window
-  </div>
-
-  <div
-    className="detail-card"
-    style={{
-  border: "1px solid #BFDBFE",
-  background: "#F0F7FF",
-}}
-  >
-    {temporalLoading ? (
-      <div className="empty-state-small">
-        Loading current review window…
-      </div>
-    ) : currentReviewWindow?.signals?.length ? (
-      <>
-        <div className="muted" style={{ marginBottom: 10 }}>
-          {currentReviewWindow.clinicalContext}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
-          {currentReviewWindow.signals.map((signal) => (
-            <span
-              key={signal.id}
-              style={signalShiftPill(signal)}
-              title={signal.interpretation}
-            >
-              {signal.label}
-
-              {signal.percentChange !== undefined && (
-                <>
-                  {" "}
-                  {signal.percentChange > 0 ? "↑" : "↓"}
-                  {Math.abs(signal.percentChange)}%
-                </>
-              )}
-
-              {signal.severity && (
-                <>
-                  {" "}·{" "}
-                  {signal.severity === "new"
-                    ? "New finding"
-                    : titleCase(signal.severity)}
-                </>
-              )}
-            </span>
-          ))}
-        </div>
-      </>
-    ) : (
-      <div className="empty-state-small">
-        Current review window unavailable
-      </div>
-    )}
-  </div>
-</section>
-</>
-)}
 
 {hasCurrentSignalEvidence && (
 <>
@@ -1677,267 +2587,265 @@ const hasCurrentSignalEvidence =
 {/* ── Temporal Signal Intelligence ───────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title-row">
-  <div className="detail-section-title">
-    Temporal Signal Trajectory
-  </div>
+    <div className="detail-section-title">
+      Temporal Signal Trajectory
+    </div>
 
-  <button
-    className="btn-secondary-small"
-    onClick={() => setShowTemporalTrajectory(!showTemporalTrajectory)}
-    type="button"
-  >
-    {showTemporalTrajectory ? "Hide" : "Show"}
-  </button>
-</div>
+    <button
+      className="btn-secondary-small"
+      onClick={() => setShowTemporalTrajectory(!showTemporalTrajectory)}
+      type="button"
+    >
+      {showTemporalTrajectory ? "Hide" : "Show"}
+    </button>
+  </div>
 
   {showTemporalTrajectory && (
-  <div className="detail-card">
-    {temporalLoading ? (
-      <div className="empty-state-small">
-        Loading temporal signal timeline…
-      </div>
-    ) : temporalTimeline ? (
-      <>
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 14,
-            borderRadius: 12,
-            background: "#F9FAFB",
-            border: "1px solid #E5E7EB",
-          }}
-        >
-          <div
-  style={{
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 10,
-  }}
->
-  <span style={trajectoryBadge(temporalTimeline.temporalSummary)}>
-    {temporalTimeline.temporalSummary.trajectoryLabel ||
-      temporalTimeline.temporalSummary.label}
-  </span>
+    <div className="detail-card temporal-trajectory-card">
+      {temporalLoading ? (
+        <div className="empty-state-small">
+          Loading temporal signal timeline…
+        </div>
+      ) : !canShowTemporalTrajectory ? (
+        <div className="temporal-unavailable">
+          <div className="temporal-unavailable-title">
+            Temporal trajectory unavailable
+          </div>
 
-  <span style={agreementBadge(temporalTimeline.temporalSummary)}>
-    {temporalTimeline.temporalSummary.agreementLabel ||
-      "Signal agreement available"}
-  </span>
-{temporalTimeline.temporalSummary.velocityLabel && (
-  <span style={velocityBadge(temporalTimeline.temporalSummary)}>
-    {temporalTimeline.temporalSummary.velocityLabel}
-{" "} -{" "}
-{titleCase(
-  temporalTimeline.temporalSummary.velocityLevel
-)}
-  </span>
-)}
-</div>
+          <div className="temporal-unavailable-copy">
+            This view requires a confirmed voice baseline, a current voice
+            deviation comparison, and at least two review windows before a
+            temporal trajectory can be shown.
+          </div>
 
-<div className="muted" style={{ marginBottom: 8 }}>
-  {temporalTimeline.temporalSummary.trajectoryContext ||
-    temporalTimeline.temporalSummary.clinicalSignificance}
-</div>
-
-{temporalTimeline.temporalSummary.velocityContext && (
-  <div className="muted" style={{ marginBottom: 8 }}>
-    {temporalTimeline.temporalSummary.velocityContext}
-  </div>
-)}
-
-<div style={{ lineHeight: 1.5 }}>
-  <strong>So what changed?</strong>{" "}
-  {temporalTimeline.temporalSummary.soWhat}
-</div>
-
-{temporalTimeline.temporalSummary.confidenceLabel && (
-  <div
-    style={{
-      marginTop: 12,
-      paddingTop: 12,
-      borderTop: "1px solid #E5E7EB",
-    }}
-  >
-    <div style={{ marginBottom: 8 }}>
-      <span style={confidenceBadge(temporalTimeline.temporalSummary)}>
-        {temporalTimeline.temporalSummary.confidenceLabel}
-      </span>
-    </div>
-
-    <div className="muted" style={{ marginBottom: 8 }}>
-      {temporalTimeline.temporalSummary.confidenceContext}
-    </div>
-
-    <div style={{ display: "grid", gap: 6 }}>
-  {temporalTimeline.temporalSummary.confidenceDrivers
-    ?.filter((d) => d.type === "positive")
-    .map((driver) => (
-      <div
-        key={driver.label}
-        className="muted"
-        style={{
-          fontSize: 13,
-          color: "#166534",
-        }}
-      >
-        ✓ {driver.label}
-      </div>
-    ))}
-
-  {temporalTimeline.temporalSummary.confidenceDrivers
-    ?.filter((d) => d.type === "limitation")
-    .map((driver) => (
-      <div
-        key={driver.label}
-        className="muted"
-        style={{
-          fontSize: 13,
-          color: "#9A3412",
-        }}
-      >
-        ⚠ {driver.label}
-      </div>
-    ))}
-</div>
-  </div>
-)}
-
-{temporalTimeline.temporalSummary.topContributingSignals?.length > 0 && (
-  <div
-    style={{
-      marginTop: 12,
-      paddingTop: 12,
-      borderTop: "1px solid #E5E7EB",
-    }}
-  >
-    <div
-      style={{
-        fontWeight: 700,
-        marginBottom: 8,
-      }}
-    >
-      Top Contributing Signals
-    </div>
-
-    <div style={{ display: "grid", gap: 8 }}>
-      {temporalTimeline.temporalSummary.topContributingSignals.map(
-        (signal, index) => (
-          <div
-            key={`${signal.label}-${index}`}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 12,
-              padding: "8px 10px",
-              borderRadius: 10,
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-            }}
-          >
-            <div style={{ fontWeight: 600 }}>
-              {index + 1}. {signal.label}
+          <div className="temporal-requirements">
+            <div className={hasVoiceBaseline ? "requirement-ok" : "requirement-missing"}>
+              {hasVoiceBaseline ? "✓" : "•"} Voice baseline confirmed
             </div>
 
-            <div className="muted" style={{ fontSize: 13 }}>
-              {signal.percentChange !== undefined && (
-                <>
-                  {signal.percentChange > 0 ? "↑" : "↓"}
-                  {Math.abs(signal.percentChange)}%
-                  {" "}
-                </>
-              )}
-              {signal.severity &&
-  (signal.severity === "new"
-    ? "New finding"
-    : titleCase(signal.severity))}
+            <div className={hasVoiceDeviationComparison ? "requirement-ok" : "requirement-missing"}>
+              {hasVoiceDeviationComparison ? "✓" : "•"} Voice deviation comparison available
+            </div>
+
+            <div className={hasTemporalWindows ? "requirement-ok" : "requirement-missing"}>
+              {hasTemporalWindows ? "✓" : "•"} At least two temporal review windows available
+            </div>
+
+            <div className={hasValidTemporalSummary ? "requirement-ok" : "requirement-missing"}>
+              {hasValidTemporalSummary ? "✓" : "•"} Temporal summary available
             </div>
           </div>
-        )
+
+          <div className="clinical-safety-note">
+            Temporal conclusions will remain hidden until the required data are present.
+            No symptom, voice-baseline, or longitudinal trend should be inferred
+            without source evidence.
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="temporal-summary-panel">
+            <div className="temporal-badge-row">
+              <span style={trajectoryBadge(temporalTimeline.temporalSummary)}>
+                {temporalTimeline.temporalSummary.trajectoryLabel ||
+                  temporalTimeline.temporalSummary.label ||
+                  "Trajectory available"}
+              </span>
+
+              <span style={agreementBadge(temporalTimeline.temporalSummary)}>
+                {temporalTimeline.temporalSummary.agreementLabel ||
+                  "Signal agreement available"}
+              </span>
+
+              {temporalTimeline.temporalSummary.velocityLabel && (
+                <span style={velocityBadge(temporalTimeline.temporalSummary)}>
+                  {temporalTimeline.temporalSummary.velocityLabel}
+                  {" "} -{" "}
+                  {titleCase(
+                    temporalTimeline.temporalSummary.velocityLevel
+                  )}
+                </span>
+              )}
+            </div>
+
+            {temporalTimeline.temporalSummary.trajectoryContext && (
+              <div className="muted" style={{ marginBottom: 8 }}>
+                {temporalTimeline.temporalSummary.trajectoryContext}
+              </div>
+            )}
+
+            {temporalTimeline.temporalSummary.velocityContext && (
+              <div className="muted" style={{ marginBottom: 8 }}>
+                {temporalTimeline.temporalSummary.velocityContext}
+              </div>
+            )}
+
+            {temporalTimeline.temporalSummary.soWhat && (
+              <div style={{ lineHeight: 1.5 }}>
+                <strong>So what changed?</strong>{" "}
+                {temporalTimeline.temporalSummary.soWhat}
+              </div>
+            )}
+
+            {temporalTimeline.temporalSummary.confidenceLabel && (
+              <div className="temporal-confidence-panel">
+                <div style={{ marginBottom: 8 }}>
+                  <span style={confidenceBadge(temporalTimeline.temporalSummary)}>
+                    {temporalTimeline.temporalSummary.confidenceLabel}
+                  </span>
+                </div>
+
+                {temporalTimeline.temporalSummary.confidenceContext && (
+                  <div className="muted" style={{ marginBottom: 8 }}>
+                    {temporalTimeline.temporalSummary.confidenceContext}
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gap: 6 }}>
+                  {temporalTimeline.temporalSummary.confidenceDrivers
+                    ?.filter((d) => d.type === "positive")
+                    .map((driver) => (
+                      <div
+                        key={driver.label}
+                        className="requirement-ok"
+                        style={{ fontSize: 13 }}
+                      >
+                        ✓ {driver.label}
+                      </div>
+                    ))}
+
+                  {temporalTimeline.temporalSummary.confidenceDrivers
+                    ?.filter((d) => d.type === "limitation")
+                    .map((driver) => (
+                      <div
+                        key={driver.label}
+                        className="requirement-missing"
+                        style={{ fontSize: 13 }}
+                      >
+                        ⚠ {driver.label}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {temporalTimeline.temporalSummary.topContributingSignals?.length > 0 && (
+              <div className="temporal-contributing-panel">
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  Top Contributing Signals
+                </div>
+
+                <div style={{ display: "grid", gap: 8 }}>
+                  {temporalTimeline.temporalSummary.topContributingSignals.map(
+                    (signal, index) => (
+                      <div
+                        key={`${signal.label}-${index}`}
+                        className="temporal-signal-row"
+                      >
+                        <div style={{ fontWeight: 600 }}>
+                          {index + 1}. {signal.label}
+                        </div>
+
+                        <div className="muted" style={{ fontSize: 13 }}>
+                          {signal.percentChange !== undefined && (
+                            <>
+                              {signal.percentChange > 0 ? "↑" : "↓"}
+                              {Math.abs(signal.percentChange)}
+                              %
+                              {" "}
+                            </>
+                          )}
+
+                          {signal.severity &&
+                            (signal.severity === "new"
+                              ? "New finding"
+                              : titleCase(signal.severity))}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {temporalTimeline.windows.map((window) => (
+              <div
+                key={window.id}
+                className="temporal-window-card"
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    gap: 12,
+                  }}
+                >
+                  <strong>{window.label}</strong>
+
+                  <span className="muted">
+                    {formatDateTime(window.timestamp)}
+                  </span>
+                </div>
+
+                {window.clinicalContext && (
+                  <div className="muted" style={{ marginBottom: 10 }}>
+                    {window.clinicalContext}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  {window.signals?.map((signal) => (
+                    <span
+                      key={signal.id}
+                      style={signalShiftPill(signal)}
+                      title={signal.interpretation}
+                    >
+                      {signal.label}
+
+                      {signal.percentChange !== undefined && (
+                        <>
+                          {" "}
+                          {signal.percentChange > 0 ? "↑" : "↓"}
+                          {Math.abs(signal.percentChange)}
+                          %
+                        </>
+                      )}
+
+                      {signal.severity && (
+                        <>
+                          {" "}· {titleCase(signal.severity)}
+                        </>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="muted"
+            style={{
+              marginTop: 12,
+              fontSize: 12,
+            }}
+          >
+            {temporalTimeline.fdaSafeDisclaimer ||
+              "Descriptive signal intelligence only. Not diagnostic."}
+          </div>
+        </>
       )}
     </div>
-  </div>
-)}
-        </div>
-
-        <div style={{ display: "grid", gap: 12 }}>
-          {temporalTimeline.windows.map((window) => (
-            <div
-              key={window.id}
-              style={{
-                border: "1px solid #E5E7EB",
-                borderRadius: 12,
-                padding: 14,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                }}
-              >
-                <strong>{window.label}</strong>
-
-                <span className="muted">
-                  {formatDateTime(window.timestamp)}
-                </span>
-              </div>
-
-              <div className="muted" style={{ marginBottom: 10 }}>
-                {window.clinicalContext}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                }}
-              >
-                {window.signals.map((signal) => (
-  <span
-    key={signal.id}
-    style={signalShiftPill(signal)}
-    title={signal.interpretation}
-  >
-    {signal.label}
-    {signal.percentChange !== undefined && (
-      <>
-        {" "}
-        {signal.percentChange > 0 ? "↑" : "↓"}
-        {Math.abs(signal.percentChange)}%
-      </>
-    )}
-    {signal.severity && (
-      <>
-        {" "}· {titleCase(signal.severity)}
-      </>
-    )}
-  </span>
-))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div
-          className="muted"
-          style={{
-            marginTop: 12,
-            fontSize: 12,
-          }}
-        >
-          {temporalTimeline.fdaSafeDisclaimer}
-        </div>
-      </>
-    ) : (
-      <div className="empty-state-small">
-        Temporal signal timeline unavailable
-      </div>
-    )}
-  </div>
-)}
+  )}
 </section>
 
 {/* ── Vitals ───────────────────────────────────────────── */}
@@ -1956,8 +2864,27 @@ const hasCurrentSignalEvidence =
 
   {showVitals && (
     <div className="detail-card">
+      <div className="vitals-filter-row">
+        <label className="vitals-filter-label">
+          Filter by parameter
+        </label>
+
+        <select
+          className="vitals-filter-select"
+          value={vitalsParameterFilter}
+          onChange={(e) => setVitalsParameterFilter(e.target.value)}
+        >
+          <option value="all">All parameters</option>
+
+          {vitalParameterOptions.map((parameter) => (
+            <option key={parameter} value={parameter}>
+              {parameter}
+            </option>
+          ))}
+        </select>
+      </div>
       {vitals && vitals.length > 0 ? (
-        <VitalsTable vitals={vitals} />
+        <VitalsTable vitals={filteredVitals} />
       ) : (
         <div className="empty-state-small">
           No wearable connected.
@@ -2311,7 +3238,7 @@ function VitalsTable({ vitals }) {
     <table className="vitals-table">
       <thead>
         <tr>
-          <th>Type</th>
+          <th>Parameter</th>
           <th>Value</th>
           <th>When</th>
           <th>Source</th>
@@ -2320,9 +3247,9 @@ function VitalsTable({ vitals }) {
       <tbody>
         {vitals.slice(0, 20).map((v, i) => (
           <tr key={i}>
-            <td>{prettyVitalType(v.type)}</td>
+            <td>{getVitalDisplayLabel(v)}</td>
             <td>
-              {v.value} {v.unit}
+              {formatVitalDisplayValue(v)} {getVitalDisplayUnit(v)}
             </td>
             <td>{formatDateTime(v.timestamp)}</td>
             <td className="muted">{v.source}</td>
