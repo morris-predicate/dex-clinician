@@ -1349,3 +1349,43 @@ body,
     align-items: flex-start;
   }
 }
+
+/* ── Roster polish: legend, sources, no-data metric tiles ───────── */
+
+.roster-status-legend {
+  display: grid;
+  gap: 6px;
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.roster-status-legend span {
+  display: block;
+}
+
+.roster-status-legend strong {
+  color: #f8fafc;
+  margin-right: 4px;
+}
+
+.roster-metric-value.no-data {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.roster-metric-value.no-data span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.source-pill {
+  text-transform: none;
+}

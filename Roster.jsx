@@ -80,14 +80,29 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
       </header>
 
       <div className="page-controls">
-        <input
-          type="search"
-          className="search-input"
-          placeholder="Search by name, patient ID, or subject ID…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+  <input
+    type="search"
+    className="search-input"
+    placeholder="Search by name, patient ID, or subject ID…"
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+  />
+</div>
+
+<div className="roster-status-legend">
+  <span>
+    <strong>Review first</strong> meaningful signal changes or convergence
+  </span>
+  <span>
+    <strong>Watch closely</strong> recent session or moderate signal context
+  </span>
+  <span>
+    <strong>Near usual</strong> no noteworthy signal changes detected
+  </span>
+  <span>
+    <strong>Awaiting session</strong> no patient voice session yet
+  </span>
+</div>
 
       {error && (
         <div className="banner-error">{error}</div>
@@ -179,6 +194,21 @@ function getReviewStatus(patient) {
     label: "Near usual",
     className: "badge badge-stable",
   };
+}
+
+function getReviewStatusDescription(label) {
+  const descriptions = {
+    "Review first":
+      "Meaningful signal changes or cross-domain convergence may warrant timely review.",
+    "Watch closely":
+      "Recent session or moderate signal context. Continue review if clinically relevant.",
+    "Near usual":
+      "No noteworthy signal changes detected from available roster data.",
+    "Awaiting session":
+      "No patient voice session has been completed yet.",
+  };
+
+  return descriptions[label] || "Roster status based on available signal context.";
 }
 
 function getSignalChipLabel(signal) {
@@ -462,6 +492,32 @@ function getRosterSources(patient) {
   return Array.from(new Set(vitalSources));
 }
 
+function formatRosterSourceLabel(source) {
+  const value = String(source || "").toLowerCase();
+
+  if (
+    value === "health_auto_export" ||
+    value === "health-auto-export" ||
+    value.includes("apple health")
+  ) {
+    return "Apple Health";
+  }
+
+  if (value.includes("validic")) {
+    return "Connected Device";
+  }
+
+  return String(source || "Unknown source")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function hasRosterMetricValue(metric) {
+  const raw = metric?.value?.value;
+
+  return raw !== null && raw !== undefined && raw !== "";
+}
 function PatientRow({ patient, onClick }) {
   const hasSession = !!patient.latestSessionId;
   const entityCount = (patient.latestEntities || []).length;
@@ -483,9 +539,12 @@ function PatientRow({ patient, onClick }) {
           <div className="patient-row-name patient-card-name">
             {patient.name || "Unnamed patient"}
 
-            <span className={reviewStatus.className}>
-              {reviewStatus.label}
-            </span>
+            <span
+  className={reviewStatus.className}
+  title={getReviewStatusDescription(reviewStatus.label)}
+>
+  {reviewStatus.label}
+</span>
 
             {hasConvergence && (
               <span className="badge badge-convergence">
@@ -528,11 +587,23 @@ function PatientRow({ patient, onClick }) {
               {metric.label}
             </div>
 
-            <div className="roster-metric-value">
-              {formatRosterMetricValue(metric)}
-              <span>{metric.unit}</span>
-              <em>{getRosterTrendSymbol(metric)}</em>
-            </div>
+            <div
+  className={
+    hasRosterMetricValue(metric)
+      ? "roster-metric-value"
+      : "roster-metric-value no-data"
+  }
+>
+  {hasRosterMetricValue(metric) ? (
+    <>
+      {formatRosterMetricValue(metric)}
+      <span>{metric.unit}</span>
+      <em>{getRosterTrendSymbol(metric)}</em>
+    </>
+  ) : (
+    <span>No data</span>
+  )}
+</div>
           </div>
         ))}
       </div>
@@ -588,23 +659,23 @@ function PatientRow({ patient, onClick }) {
         <div>
           Sources:
           {sources.length > 0 ? (
-            sources.slice(0, 4).map((source) => (
-              <span key={source} className="source-pill">
-                {source}
-              </span>
-            ))
-          ) : (
-            <span className="source-pill muted-source">
-              Not connected
-            </span>
-          )}
+  sources.slice(0, 4).map((source) => (
+    <span key={source} className="source-pill">
+      {formatRosterSourceLabel(source)}
+    </span>
+  ))
+) : (
+  <span className="source-pill muted-source">
+    Not connected
+  </span>
+)}
         </div>
 
         {hasSession && (
-          <div className="patient-row-priority-score">
-            Priority {computePatientPriority(patient)}
-          </div>
-        )}
+  <div className="patient-row-priority-score">
+    Sorted by signal context
+  </div>
+)}
       </div>
     </button>
   );
