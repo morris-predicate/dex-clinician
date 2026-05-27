@@ -49,7 +49,18 @@ const filtered = patients.filter((p) => {
     );
 });
 
-  const withSessions = filtered.filter((p) => p.latestSessionId).length;
+const prioritizedPatients = [...filtered].sort((a, b) => {
+  const scoreDelta = computePatientPriority(b) - computePatientPriority(a);
+
+  if (scoreDelta !== 0) return scoreDelta;
+
+  const bTime = b.latestSessionAt ? new Date(b.latestSessionAt).getTime() : 0;
+  const aTime = a.latestSessionAt ? new Date(a.latestSessionAt).getTime() : 0;
+
+  return bTime - aTime;
+});
+
+const withSessions = filtered.filter((p) => p.latestSessionId).length;
 
   if (loading && patients.length === 0) {
     return <div className="page-loading">Loading roster…</div>;
@@ -88,17 +99,367 @@ const filtered = patients.filter((p) => {
         </div>
       ) : (
         <div className="patient-list">
-          {filtered.map((p) => (
-            <PatientRow
-              key={p.patientId}
-              patient={p}
-              onClick={() => onSelectPatient(p.patientId)}
-            />
-          ))}
-        </div>
+  {prioritizedPatients.map((p) => (
+    <PatientRow
+      key={p.patientId}
+      patient={p}
+      onClick={() => onSelectPatient(p.patientId)}
+    />
+  ))}
+</div>
       )}
     </div>
   );
+}
+
+function getAbnormalSignals(patient) {
+  const candidates =
+    patient.abnormalSignals ||
+    patient.signalEvidence ||
+    patient.currentSignals ||
+    patient.changedSignals ||
+    patient.latestSignalEvidence ||
+    [];
+
+  if (!Array.isArray(candidates)) return [];
+
+  return candidates.filter(Boolean);
+}
+
+function hasConvergentSignals(patient) {
+  return (
+    Boolean(patient.hasConvergentSignals) ||
+    Boolean(patient.signalAlignment?.hasConvergence) ||
+    Boolean(patient.convergence) ||
+    Boolean(patient.crossDomainConvergence) ||
+    Boolean(patient.fusionScore?.crossDomainConvergence)
+  );
+}
+
+function computePatientPriority(patient) {
+  const hasSession = !!patient.latestSessionId;
+  const entityCount = (patient.latestEntities || []).length;
+  const abnormalSignals = getAbnormalSignals(patient);
+  const abnormalCount = abnormalSignals.length;
+  const hasConvergence = hasConvergentSignals(patient);
+
+  const sessionBonus = hasSession ? 2 : 0;
+  const entityBonus = Math.min(entityCount, 5);
+  const abnormalBonus = abnormalCount * 4;
+  const convergenceBonus = hasConvergence ? 6 : 0;
+
+  return sessionBonus + entityBonus + abnormalBonus + convergenceBonus;
+}
+
+function getReviewStatus(patient) {
+  const score = computePatientPriority(patient);
+
+  if (!patient.latestSessionId) {
+    return {
+      label: "Awaiting session",
+      className: "badge badge-pending",
+    };
+  }
+
+  if (score >= 10) {
+    return {
+      label: "Review first",
+      className: "badge badge-review-now",
+    };
+  }
+
+  if (score >= 5) {
+    return {
+      label: "Watch closely",
+      className: "badge badge-watch",
+    };
+  }
+
+  return {
+    label: "Near usual",
+    className: "badge badge-stable",
+  };
+}
+
+function getSignalChipLabel(signal) {
+  const label = signal.label || signal.name || signal.signal || signal.type || "Signal";
+  const direction = String(signal.direction || signal.trend || "").toLowerCase();
+
+  if (
+    direction.includes("increase") ||
+    direction.includes("higher") ||
+    direction.includes("up")
+  ) {
+    return `${label} ↑`;
+  }
+
+  if (
+    direction.includes("decrease") ||
+    direction.includes("lower") ||
+    direction.includes("down")
+  ) {
+    return `${label} ↓`;
+  }
+
+  return label;
+}
+
+function getPatientLatestVitals(patient) {
+  const candidates =
+    patient.latestVitals ||
+    patient.currentVitals ||
+    patient.vitals ||
+    patient.vitalsSummary ||
+    patient.latestReadings ||
+    [];
+
+  if (Array.isArray(candidates)) {
+    return candidates;
+  }
+
+  if (candidates && typeof candidates === "object") {
+    return Object.entries(candidates).map(([type, value]) => ({
+      type,
+      value:
+        value && typeof value === "object"
+          ? value.value ?? value.latest ?? value.current
+          : value,
+      unit: value && typeof value === "object" ? value.unit : undefined,
+      trend:
+        value && typeof value === "object"
+          ? value.trend || value.direction
+          : undefined,
+      timestamp:
+        value && typeof value === "object"
+          ? value.timestamp || value.updatedAt || value.observedAt
+          : undefined,
+      source:
+        value && typeof value === "object"
+          ? value.source || value.source_device || value.device
+          : undefined,
+    }));
+  }
+
+  return [];
+}
+
+function normalizeRosterVitalType(type) {
+  if (!type) return "";
+
+  const raw = String(type);
+  const lower = raw.toLowerCase();
+
+  const aliases = {
+    heart_rate: "heart_rate",
+    "heart rate": "heart_rate",
+    hr: "heart_rate",
+    heartrate: "heart_rate",
+
+    hrv: "hrv_sdnn",
+    hrv_sdnn: "hrv_sdnn",
+    "heart rate variability": "hrv_sdnn",
+    heart_rate_variability: "hrv_sdnn",
+
+    respiratory_rate: "respiratory_rate",
+    "respiratory rate": "respiratory_rate",
+    rr: "respiratory_rate",
+
+    spo2: "spo2",
+    sp_o2: "spo2",
+    "spo₂": "spo2",
+    "spO₂": "spo2",
+    "SpO₂": "spo2",
+    oxygen_saturation: "spo2",
+    "oxygen saturation": "spo2",
+
+    temperature: "temperature",
+    temp: "temperature",
+    body_temperature: "temperature",
+    wrist_temperature: "temperature",
+  };
+
+  return aliases[raw] || aliases[lower] || lower;
+}
+
+function getRosterVitalValue(patient, metricType) {
+  const vitals = getPatientLatestVitals(patient);
+  const normalizedMetric = normalizeRosterVitalType(metricType);
+
+  const direct = vitals.find(
+    (v) =>
+      normalizeRosterVitalType(
+        v.type || v.metric || v.name || v.vitalType || v.parameter
+      ) === normalizedMetric
+  );
+
+  if (direct) return direct;
+
+  const signal = getAbnormalSignals(patient).find(
+    (s) =>
+      normalizeRosterVitalType(s.signal || s.type || s.metric || s.label) ===
+      normalizedMetric
+  );
+
+  if (signal) {
+    return {
+      type: metricType,
+      value: signal.value ?? signal.latestValue ?? signal.currentValue,
+      unit: signal.unit,
+      trend: signal.direction || signal.trend,
+      abnormal: true,
+    };
+  }
+
+  return null;
+}
+
+function getRosterMetricConfig(patient) {
+  return [
+    {
+      id: "heart_rate",
+      label: "HR",
+      unit: "bpm",
+      icon: "♡",
+      value: getRosterVitalValue(patient, "heart_rate"),
+    },
+    {
+      id: "hrv_sdnn",
+      label: "HRV",
+      unit: "ms",
+      icon: "⌁",
+      value: getRosterVitalValue(patient, "hrv_sdnn"),
+    },
+    {
+      id: "spo2",
+      label: "SpO₂",
+      unit: "%",
+      icon: "≋",
+      value: getRosterVitalValue(patient, "spo2"),
+    },
+    {
+      id: "respiratory_rate",
+      label: "RR",
+      unit: "br/min",
+      icon: "≋",
+      value: getRosterVitalValue(patient, "respiratory_rate"),
+    },
+    {
+      id: "temperature",
+      label: "Temp",
+      unit: "°C",
+      icon: "°",
+      value: getRosterVitalValue(patient, "temperature"),
+    },
+  ];
+}
+
+function formatRosterMetricValue(metric) {
+  const raw = metric.value?.value;
+
+  if (raw === null || raw === undefined || raw === "") {
+    return "—";
+  }
+
+  const n = Number(raw);
+
+  if (!Number.isFinite(n)) {
+    return raw;
+  }
+
+  if (metric.id === "spo2" && n > 0 && n <= 1) {
+    return Math.round(n * 100);
+  }
+
+  if (metric.id === "heart_rate" || metric.id === "respiratory_rate") {
+    return Math.round(n);
+  }
+
+  if (metric.id === "hrv_sdnn" || metric.id === "temperature") {
+    return n.toFixed(1).replace(".0", "");
+  }
+
+  return n;
+}
+
+function getRosterTrendSymbol(metric) {
+  const trend = String(metric.value?.trend || "").toLowerCase();
+
+  if (
+    trend.includes("increase") ||
+    trend.includes("higher") ||
+    trend.includes("up")
+  ) {
+    return "↗";
+  }
+
+  if (
+    trend.includes("decrease") ||
+    trend.includes("lower") ||
+    trend.includes("down")
+  ) {
+    return "↘";
+  }
+
+  return "–";
+}
+
+function getMetricCardClass(metric) {
+  if (metric.value?.abnormal) {
+    return "roster-metric-card abnormal";
+  }
+
+  const trend = String(metric.value?.trend || "").toLowerCase();
+
+  if (
+    trend.includes("increase") ||
+    trend.includes("higher") ||
+    trend.includes("decrease") ||
+    trend.includes("lower") ||
+    trend.includes("up") ||
+    trend.includes("down")
+  ) {
+    return "roster-metric-card watch";
+  }
+
+  return "roster-metric-card";
+}
+
+function getLatestDataTime(patient) {
+  const vitals = getPatientLatestVitals(patient);
+
+  const times = [
+    patient.latestVitalsAt,
+    patient.latestWearableAt,
+    patient.latestSessionAt,
+    ...vitals.map((v) => v.timestamp || v.updatedAt || v.observedAt),
+  ]
+    .filter(Boolean)
+    .map((t) => new Date(t).getTime())
+    .filter((t) => Number.isFinite(t));
+
+  if (!times.length) return null;
+
+  return formatRelativeDate(new Date(Math.max(...times)).toISOString());
+}
+
+function getRosterSources(patient) {
+  const sources =
+    patient.sources ||
+    patient.dataSources ||
+    patient.connectedSources ||
+    patient.latestSources ||
+    [];
+
+  if (Array.isArray(sources) && sources.length > 0) {
+    return sources;
+  }
+
+  const vitals = getPatientLatestVitals(patient);
+  const vitalSources = vitals
+    .map((v) => v.source || v.source_device || v.device)
+    .filter(Boolean);
+
+  return Array.from(new Set(vitalSources));
 }
 
 function PatientRow({ patient, onClick }) {
@@ -108,51 +469,146 @@ function PatientRow({ patient, onClick }) {
     ? formatRelativeDate(patient.latestSessionAt)
     : null;
 
+  const abnormalSignals = getAbnormalSignals(patient);
+  const reviewStatus = getReviewStatus(patient);
+  const hasConvergence = hasConvergentSignals(patient);
+  const metrics = getRosterMetricConfig(patient);
+  const latestDataTime = getLatestDataTime(patient);
+  const sources = getRosterSources(patient);
+
   return (
-    <button className="patient-row" onClick={onClick}>
-      <div className="patient-row-main">
-        <div className="patient-row-name">
-          {patient.name || "Unnamed patient"}
-          {!hasSession && <span className="badge badge-pending">Awaiting session</span>}
+    <button className="patient-row patient-card-row" onClick={onClick}>
+      <div className="patient-card-topline">
+        <div>
+          <div className="patient-row-name patient-card-name">
+            {patient.name || "Unnamed patient"}
+
+            <span className={reviewStatus.className}>
+              {reviewStatus.label}
+            </span>
+
+            {hasConvergence && (
+              <span className="badge badge-convergence">
+                Voice + vitals
+              </span>
+            )}
+          </div>
+
+          <div className="patient-row-meta">
+            {patient.dob && <>DOB {patient.dob}</>}
+            {patient.sex && <> · {patient.sex}</>}
+
+            {patient.subjectUid && (
+              <>
+                {" "}· Subject {patient.subjectUid.slice(-6)}
+              </>
+            )}
+
+            {patient.patientId && (
+              <>
+                {" "}· Profile {patient.patientId.slice(-6)}
+              </>
+            )}
+
+            {patient.status && <> · {patient.status}</>}
+          </div>
         </div>
-        <div className="patient-row-meta">
-  {patient.dob && <>DOB {patient.dob}</>}
-  {patient.sex && <> · {patient.sex}</>}
 
-  {patient.subjectUid && (
-    <>
-      {" "}· Subject {patient.subjectUid.slice(-6)}
-    </>
-  )}
-
-  {patient.patientId && (
-    <>
-      {" "}· Profile {patient.patientId.slice(-6)}
-    </>
-  )}
-
-  {patient.status && <> · {patient.status}</>}
-</div>
+        <div className="patient-card-recency">
+          {latestDataTime || lastSession || "No session yet"}
+          <span className="patient-row-chevron">›</span>
+        </div>
       </div>
 
-      <div className="patient-row-session">
-        {hasSession ? (
-          <>
-            <div className="patient-row-session-time">{lastSession}</div>
-            <div className="patient-row-entity-count">
-              {entityCount} {entityCount === 1 ? "entity" : "entities"}
+      <div className="roster-metric-grid">
+        {metrics.map((metric) => (
+          <div key={metric.id} className={getMetricCardClass(metric)}>
+            <div className="roster-metric-label">
+              <span className="roster-metric-icon">{metric.icon}</span>
+              {metric.label}
             </div>
-          </>
-        ) : (
-          <div className="patient-row-session-time muted">No session yet</div>
+
+            <div className="roster-metric-value">
+              {formatRosterMetricValue(metric)}
+              <span>{metric.unit}</span>
+              <em>{getRosterTrendSymbol(metric)}</em>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="patient-card-voice-row">
+        <div className="patient-card-voice-left">
+          <span className="voice-dot">⌕</span>
+
+          {hasSession ? (
+            <>
+              Latest voice entry:
+              <strong>{lastSession || "recent"}</strong>
+            </>
+          ) : (
+            <>
+              Voice entry:
+              <strong>not yet available</strong>
+            </>
+          )}
+        </div>
+
+        <div className="patient-card-voice-right">
+          {entityCount > 0 ? (
+            <>
+              {entityCount} {entityCount === 1 ? "entity" : "entities"}
+            </>
+          ) : (
+            <>No symptom entities yet</>
+          )}
+        </div>
+      </div>
+
+      {abnormalSignals.length > 0 && (
+        <div className="patient-row-signal-chips">
+          {abnormalSignals.slice(0, 4).map((signal, index) => (
+            <span
+              key={`${signal.signal || signal.label || signal.type || "signal"}-${index}`}
+              className="patient-signal-chip"
+            >
+              {getSignalChipLabel(signal)}
+            </span>
+          ))}
+
+          {abnormalSignals.length > 4 && (
+            <span className="patient-signal-chip muted-chip">
+              +{abnormalSignals.length - 4} more
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="patient-card-footer">
+        <div>
+          Sources:
+          {sources.length > 0 ? (
+            sources.slice(0, 4).map((source) => (
+              <span key={source} className="source-pill">
+                {source}
+              </span>
+            ))
+          ) : (
+            <span className="source-pill muted-source">
+              Not connected
+            </span>
+          )}
+        </div>
+
+        {hasSession && (
+          <div className="patient-row-priority-score">
+            Priority {computePatientPriority(patient)}
+          </div>
         )}
       </div>
-
-      <div className="patient-row-chevron">›</div>
     </button>
   );
 }
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function formatTime(d) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });

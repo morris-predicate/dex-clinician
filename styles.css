@@ -1087,3 +1087,265 @@ body,
 .selected-time-snapshot-empty strong {
   color: #f8fafc;
 }
+
+/* ── Roster triage priority UX ───────────────────────────────── */
+
+.patient-row-priority {
+  position: relative;
+}
+
+.patient-row-priority::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.35);
+}
+
+.badge-review-now {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-watch {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.badge-stable {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+  border: 1px solid rgba(34, 197, 94, 0.24);
+}
+
+.badge-convergence {
+  background: rgba(20, 184, 166, 0.14);
+  color: #0f766e;
+  border: 1px solid rgba(20, 184, 166, 0.28);
+}
+
+.patient-row-signal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.patient-signal-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: rgba(15, 23, 42, 0.04);
+  color: #334155;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.muted-chip {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.patient-row-priority-score {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ── Detailed roster patient cards ───────────────────────────── */
+
+.patient-list {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.patient-card-row {
+  display: block;
+  text-align: left;
+  padding: 18px;
+  border-radius: 14px;
+  margin-bottom: 0;
+  border: 1px solid #243244;
+  background: #111827;
+}
+
+.patient-card-row:hover {
+  background: #151f2e;
+  border-color: #334155;
+}
+
+.patient-card-row::before {
+  top: 18px;
+  bottom: 18px;
+}
+
+.patient-card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.patient-card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.patient-card-recency {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.roster-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.roster-metric-card {
+  border: 1px solid #1f2937;
+  background: #0f172a;
+  border-radius: 9px;
+  padding: 9px 10px;
+  min-height: 54px;
+}
+
+.roster-metric-card.watch {
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.08);
+}
+
+.roster-metric-card.abnormal {
+  border-color: rgba(249, 115, 22, 0.9);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.12);
+}
+
+.roster-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.roster-metric-icon {
+  color: #22d3ee;
+  font-size: 12px;
+}
+
+.roster-metric-value {
+  margin-top: 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #f8fafc;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.roster-metric-value span {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.roster-metric-value em {
+  margin-left: auto;
+  color: #f59e0b;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.patient-card-voice-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: rgba(34, 197, 94, 0.06);
+  border-radius: 10px;
+  padding: 9px 11px;
+  margin-top: 10px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.patient-card-voice-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.patient-card-voice-left strong {
+  color: #34d399;
+  margin-left: 3px;
+}
+
+.patient-card-voice-right {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.voice-dot {
+  color: #34d399;
+  font-weight: 900;
+}
+
+.patient-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #1f2937;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.source-pill {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.muted-source {
+  color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .roster-metric-grid {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+
+  .patient-card-topline,
+  .patient-card-voice-row,
+  .patient-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
