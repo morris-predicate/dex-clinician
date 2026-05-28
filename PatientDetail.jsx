@@ -86,7 +86,6 @@ function normalizeVitalType(type) {
     spo2: "spo2",
     sp_o2: "spo2",
     SpO2: "spo2",
-    "SpO2": "spo2",
     "SpO₂": "spo2",
     oxygen_saturation: "spo2",
     "oxygen saturation": "spo2",
@@ -322,11 +321,11 @@ function KeyObservations({
     currentSignalInsight?.overallStatus?.signalEvidence || [];
 
   const hasChangedSignals = signalEvidence.length > 0;
-  const latestVoiceAt = patient?.latestSessionAt
+  const latestVoiceAtForMap = patient?.latestSessionAt
     ? new Date(patient.latestSessionAt)
     : null;
 
-  const patientReportedText =
+  const patientReportedTextForMap =
     patient?.latestTranscriptSummary ||
     patient?.latestPatientStatement ||
     patient?.latestVoiceText ||
@@ -365,7 +364,7 @@ function KeyObservations({
     );
   });
 
-  const voiceSignals = signalEvidence.filter((signal) => {
+  const voiceSignalsForMap = signalEvidence.filter((signal) => {
     const id = String(signal.signal || signal.id || "").toLowerCase();
     const label = String(signal.label || "").toLowerCase();
 
@@ -386,14 +385,14 @@ function KeyObservations({
   const otherSignals = signalEvidence.filter(
     (signal) =>
       !vitalSignals.includes(signal) &&
-      !voiceSignals.includes(signal)
+      !voiceSignalsForMap.includes(signal)
   );
 
   const hasVoiceContext =
-    latestVoiceAt ||
-    patientReportedText ||
+    latestVoiceAtForMap ||
+    patientReportedTextForMap ||
     extractedSymptoms.length > 0 ||
-    voiceSignals.length > 0 ||
+    voiceSignalsForMap.length > 0 ||
     voiceDeviation?.compared;
 
   if (!hasChangedSignals && !hasVoiceContext) {
@@ -518,15 +517,15 @@ function KeyObservations({
             Voice / Patient-Reported Context
           </div>
 
-          {patientReportedText ? (
+          {patientReportedTextForMap ? (
             <div className="voice-quote">
-              “{patientReportedText}”
+              “{patientReportedTextForMap}”
             </div>
           ) : extractedSymptoms.length > 0 ? (
             <div className="voice-quote">
               “{extractedSymptoms.join(", ")}”
             </div>
-          ) : latestVoiceAt ? (
+          ) : latestVoiceAtForMap ? (
             <div className="voice-quote muted-voice">
               Voice entry captured. No symptom quote available.
             </div>
@@ -536,9 +535,9 @@ function KeyObservations({
             </div>
           )}
 
-          {voiceSignals.length > 0 && (
+          {voiceSignalsForMap.length > 0 && (
             <ul className="observation-list voice-signal-list">
-              {voiceSignals.map((signal) => (
+              {voiceSignalsForMap.map((signal) => (
                 <li key={signal.signal || signal.id || signal.label}>
                   <strong>{signal.label}:</strong>{" "}
                   {clinicianizeText(
@@ -551,7 +550,7 @@ function KeyObservations({
             </ul>
           )}
 
-          {!voiceSignals.length && voiceDeviation?.compared && (
+          {!voiceSignalsForMap.length && voiceDeviation?.compared && (
             <div className="observation-empty-line">
               Voice compared with baseline: {titleCase(voiceDeviation.deviationLevel)}.
             </div>
@@ -983,7 +982,7 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
             )
             ?.map((e) => e.text) || [],
 
-        voiceSignals:
+        voiceSignalsForMap:
           voiceDeviation?.features
             ?.filter(
               (f) => f.severity !== "stable"
@@ -1302,7 +1301,7 @@ xAxis: {
           : 0,
       label: event.label,
       symptoms: event.symptoms,
-      voiceSignals: event.voiceSignals,
+      voiceSignalsForMap: event.voiceSignalsForMap,
     })),
     yAxis: 0,
     color: "#22C55E",
@@ -1327,8 +1326,8 @@ tooltip: {
       ? this.symptoms
       : ["None recorded"];
 
-    const voiceSignals = this.voiceSignals?.length
-      ? this.voiceSignals
+    const voiceSignalsForMap = this.voiceSignalsForMap?.length
+      ? this.voiceSignalsForMap
       : ["Not available"];
 
     return `
@@ -1345,7 +1344,7 @@ tooltip: {
     Voice Signal Context:
   </span>
   <br/>
-  ${voiceSignals.map((s) => `• ${s}`).join("<br/>")}
+  ${voiceSignalsForMap.map((s) => `• ${s}`).join("<br/>")}
 `;
   },
 },
@@ -1635,8 +1634,8 @@ tooltip: {
           {selectedSnapshot.voiceEvent.symptoms?.length
             ? ` · Reported: ${selectedSnapshot.voiceEvent.symptoms.join(", ")}`
             : ""}
-          {selectedSnapshot.voiceEvent.voiceSignals?.length
-            ? ` · Voice signals: ${selectedSnapshot.voiceEvent.voiceSignals.join(", ")}`
+          {selectedSnapshot.voiceEvent.voiceSignalsForMap?.length
+            ? ` · Voice signals: ${selectedSnapshot.voiceEvent.voiceSignalsForMap.join(", ")}`
             : ""}
         </>
       ) : selectedSnapshot.voiceDeviation?.compared ? (
@@ -2378,21 +2377,55 @@ const canShowTemporalTrajectory =
       </div>
     ) : (() => {
       const signalEvidence =
-        currentSignalInsight?.overallStatus?.signalEvidence || [];
+  currentSignalInsight?.overallStatus?.signalEvidence || [];
 
-      const patientSymptoms = (extractedSymptoms || [])
-        .filter(Boolean)
-        .slice(0, 6);
+const patientReportedTextForMap =
+  patient?.latestTranscriptSummary ||
+  patient?.latestPatientStatement ||
+  patient?.latestVoiceText ||
+  patient?.latestSessionText ||
+  null;
 
-      const hasPatientReportedContext =
-        Boolean(patientReportedText) || patientSymptoms.length > 0;
+const extractedSymptomsForMap = (entities || [])
+  .filter((entity) => entity.category === "MEDICAL_CONDITION")
+  .map((entity) => entity.text)
+  .filter(Boolean);
 
-      const hasVoiceContext =
-        Boolean(latestVoiceAt) ||
-        Boolean(voiceDeviation?.compared) ||
-        (voiceSignals || []).length > 0;
+const latestVoiceAtForMap = patient?.latestSessionAt
+  ? new Date(patient.latestSessionAt)
+  : null;
 
-      const hasPhysiologicContext = signalEvidence.length > 0;
+const voiceSignalsForMap = signalEvidence.filter((signal) => {
+  const id = String(signal.signal || signal.id || "").toLowerCase();
+  const label = String(signal.label || "").toLowerCase();
+
+  return (
+    id.includes("voice") ||
+    id.includes("speech") ||
+    id.includes("pause") ||
+    id.includes("tempo") ||
+    id.includes("hesitation") ||
+    label.includes("voice") ||
+    label.includes("speech") ||
+    label.includes("pause") ||
+    label.includes("tempo") ||
+    label.includes("hesitation")
+  );
+});
+
+const patientSymptoms = extractedSymptomsForMap
+  .filter(Boolean)
+  .slice(0, 6);
+
+const hasPatientReportedContext =
+  Boolean(patientReportedTextForMap) || patientSymptoms.length > 0;
+
+const hasVoiceContext =
+  Boolean(latestVoiceAtForMap) ||
+  Boolean(voiceDeviation?.compared) ||
+  voiceSignalsForMap.length > 0;
+
+const hasPhysiologicContext = signalEvidence.length > 0;
 
       const hasFusionContext =
         Boolean(currentSignalInsight?.overallStatus?.fusionScore) ||
@@ -2447,7 +2480,7 @@ const canShowTemporalTrajectory =
           label: "Patient-reported",
           group: "patient",
           detail:
-            patientReportedText ||
+            patientReportedTextForMap ||
             patientSymptoms.join(", ") ||
             "Patient-reported context available.",
           fx: -250,
@@ -2461,12 +2494,12 @@ const canShowTemporalTrajectory =
           "patient"
         );
 
-        if (patientReportedText) {
+        if (patientReportedTextForMap) {
           addNode({
             id: "reported_quote",
             label: "Reported statement",
             group: "patient_detail",
-            detail: patientReportedText,
+            detail: patientReportedTextForMap,
             fx: -390,
             fy: -175,
           });
@@ -2503,7 +2536,7 @@ const canShowTemporalTrajectory =
             ? `Voice compared with baseline: ${titleCase(
                 voiceDeviation.deviationLevel
               )}.`
-            : latestVoiceAt
+            : latestVoiceAtForMap
               ? "Voice entry captured. Baseline comparison may be limited."
               : "Voice context available.",
           fx: 0,
@@ -2517,7 +2550,7 @@ const canShowTemporalTrajectory =
           "voice"
         );
 
-        (voiceSignals || []).slice(0, 5).forEach((signal, index) => {
+        (voiceSignalsForMap || []).slice(0, 5).forEach((signal, index) => {
           const id = `voice_signal_${signal.signal || signal.id || index}`;
 
           addNode({
@@ -2536,7 +2569,7 @@ const canShowTemporalTrajectory =
           addLink(id, "voice_domain", "feature", "voice");
         });
 
-        if (!voiceSignals?.length && voiceDeviation?.compared) {
+        if (!voiceSignalsForMap?.length && voiceDeviation?.compared) {
           addNode({
             id: "voice_baseline_comparison",
             label: "Voice baseline comparison",
