@@ -1810,10 +1810,10 @@ useEffect(() => {
 
   const fg = graphRef.current;
 
-  requestAnimationFrame(() => {
-    fg.centerAt(0, 30, 0);
-    fg.zoom(0.92, 0);
-  });
+ requestAnimationFrame(() => {
+  fg.centerAt(30, 36, 0);
+  fg.zoom(0.82, 0);
+});
 }, [currentSignalInsight]);
 
 async function loadFusionSummary() {
@@ -2678,8 +2678,8 @@ const canShowTemporalTrajectory =
             patientSymptoms.join(", ") ||
             "Patient-reported context is available.",
           category: "Input",
-          fx: -300,
-          fy: -120,
+          fx: -235,
+          fy: -115,
         });
 
         addLink(
@@ -2696,8 +2696,8 @@ const canShowTemporalTrajectory =
             group: "patient_detail",
             detail: patientReportedTextForMap,
             category: "Patient-reported input",
-            fx: -460,
-            fy: -195,
+            fx: -345,
+            fy: -185,
           });
 
           addLink(
@@ -2717,8 +2717,8 @@ const canShowTemporalTrajectory =
             group: "patient_detail",
             detail: `Extracted patient-reported context: ${symptom}`,
             category: "Patient-reported input",
-            fx: -455 + index * 35,
-            fy: -35 + index * 28,
+            fx: -345 + index * 26,
+            fy: -28 + index * 24,
           });
 
           addLink(id, "patient_reported_domain", "reported symptom", "patient");
@@ -2734,8 +2734,8 @@ const canShowTemporalTrajectory =
             physiologicSignalsForMap.length === 1 ? "" : "s"
           } contributed to the current review context.`,
           category: "Input",
-          fx: 300,
-          fy: -115,
+          fx: 235,
+          fy: -105,
         });
 
         addLink(
@@ -2761,21 +2761,21 @@ const canShowTemporalTrajectory =
             severity: signal.severity,
             contributionScore: signal.score,
             fx:
-              430 +
-              Math.cos(
-                (index / Math.max(normalizedPhysiologyForMap.length, 1)) *
-                  Math.PI *
-                  2
-              ) *
-                95,
-            fy:
-              -70 +
-              Math.sin(
-                (index / Math.max(normalizedPhysiologyForMap.length, 1)) *
-                  Math.PI *
-                  2
-              ) *
-                82,
+  335 +
+  Math.cos(
+    (index / Math.max(normalizedPhysiologyForMap.length, 1)) *
+      Math.PI *
+      2
+  ) *
+    72,
+fy:
+  -55 +
+  Math.sin(
+    (index / Math.max(normalizedPhysiologyForMap.length, 1)) *
+      Math.PI *
+      2
+  ) *
+    68,
           });
 
           addLink(
@@ -2869,8 +2869,8 @@ const canShowTemporalTrajectory =
             otherSignalsForMap.length === 1 ? "" : "s"
           } contributed to the current review context.`,
           category: "Input",
-          fx: 300,
-          fy: 125,
+          fx: 235,
+          fy: 130,
         });
 
         addLink(
@@ -2893,8 +2893,8 @@ const canShowTemporalTrajectory =
                 "Additional signal context detected."
             ),
             category: "Additional signal",
-            fx: 430 + index * 42,
-            fy: 120 + index * 32,
+            fx: 330 + index * 28,
+            fy: 120 + index * 26,
           });
 
           addLink(id, "other_signal_domain", "additional signal", "other");
@@ -2967,8 +2967,8 @@ const canShowTemporalTrajectory =
 
       const graphWidth =
         typeof window !== "undefined"
-          ? Math.max(Math.min(window.innerWidth - 560, 860), 640)
-          : 760;
+          ? Math.max(Math.min(window.innerWidth - 500, 980), 720)
+          : 840;
 
       const selectedNodeForPanel = selectedSignalNode || {
         label: reviewPriorityLabel,
@@ -3099,38 +3099,51 @@ const canShowTemporalTrajectory =
                   ctx.stroke();
 
                   ctx.shadowBlur = 0;
-                  ctx.font = `700 ${fontSize}px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "top";
-                  ctx.fillStyle = "#E5E7EB";
+ctx.font = `700 ${Math.max(9 / globalScale, 7.5)}px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
 
-                  const maxLabelWidth = 150 / globalScale;
-                  const words = label.split(" ");
-                  const lines = [];
-                  let line = "";
+ctx.textAlign =
+  x > 290 ? "right" : x < -290 ? "left" : "center";
+ctx.textBaseline = "top";
+ctx.fillStyle = "#E5E7EB";
 
-                  words.forEach((word) => {
-                    const test = line ? `${line} ${word}` : word;
-                    if (ctx.measureText(test).width > maxLabelWidth && line) {
-                      lines.push(line);
-                      line = word;
-                    } else {
-                      line = test;
-                    }
-                  });
+const maxLabelWidth =
+  node.group === "output" || node.group === "output_detail"
+    ? 145 / globalScale
+    : 120 / globalScale;
 
-                  if (line) lines.push(line);
+const words = label.split(" ");
+const lines = [];
+let line = "";
 
-                  lines.slice(0, 2).forEach((textLine, index) => {
-                    ctx.fillText(
-                      textLine,
-                      x,
-                      y +
-                        radius +
-                        6 / globalScale +
-                        index * (fontSize + 2 / globalScale)
-                    );
-                  });
+words.forEach((word) => {
+  const test = line ? `${line} ${word}` : word;
+  if (ctx.measureText(test).width > maxLabelWidth && line) {
+    lines.push(line);
+    line = word;
+  } else {
+    line = test;
+  }
+});
+
+if (line) lines.push(line);
+
+const labelX =
+  x > 290
+    ? x - 12 / globalScale
+    : x < -290
+      ? x + 12 / globalScale
+      : x;
+
+lines.slice(0, 3).forEach((textLine, index) => {
+  ctx.fillText(
+    textLine,
+    labelX,
+    y +
+      radius +
+      6 / globalScale +
+      index * ((Math.max(9 / globalScale, 7.5)) + 2 / globalScale)
+  );
+});
 
                   ctx.restore();
                 }}
