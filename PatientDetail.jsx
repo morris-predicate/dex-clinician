@@ -2463,7 +2463,7 @@ const hasPhysiologicContext = signalEvidence.length > 0;
 
       addNode({
         id: "clinical_context",
-        label: "Current signal context",
+        label: "Current patient status",
         group: "fusion",
         detail:
           currentSignalInsight?.overallStatus?.clinician?.review
@@ -2650,10 +2650,10 @@ const hasPhysiologicContext = signalEvidence.length > 0;
         addNode({
           id: "fusion_summary",
           label: fusionScore.crossDomainConvergence
-            ? "Cross-domain convergence"
+            ? "Convergent signals"
             : signalEvidence.length > 1
-              ? "Multi-signal context"
-              : "Single-domain context",
+            ? "Convergent signals"
+            : "Single-domain signal",
           group: "fusion_detail",
           detail:
             currentSignalInsight?.overallStatus?.clinician?.review
