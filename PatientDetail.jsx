@@ -2427,16 +2427,144 @@ const hasVoiceContext =
 
 const hasPhysiologicContext = signalEvidence.length > 0;
 
-      const hasFusionContext =
-        Boolean(currentSignalInsight?.overallStatus?.fusionScore) ||
-        Boolean(currentSignalInsight?.overallStatus?.clinician?.review) ||
-        Boolean(currentSignalInsight?.overallStatus?.temporalContext);
+const symptomTextForMap = [
+  patientReportedTextForMap,
+  ...extractedSymptomsForMap,
+]
+  .filter(Boolean)
+  .join(" ")
+  .toLowerCase();
 
-      const hasSignalMapData =
-        hasPatientReportedContext ||
-        hasVoiceContext ||
-        hasPhysiologicContext ||
-        hasFusionContext;
+const normalizedEvidenceForMap = signalEvidence.map((signal) => {
+  const id = String(signal.signal || signal.id || "").toLowerCase();
+  const label = String(signal.label || "").toLowerCase();
+
+  return {
+    ...signal,
+    normalizedId: id,
+    normalizedLabel: label,
+    combinedText: `${id} ${label}`,
+  };
+});
+
+const hasEvidenceMatch = (patterns = []) =>
+  normalizedEvidenceForMap.some((signal) =>
+    patterns.some((pattern) => pattern.test(signal.combinedText))
+  );
+
+const concordanceRules = [
+  {
+    id: "fever_temp_hr",
+    label: "Fever pattern",
+    symptomPatterns: [/\bfever\b/, /\bfebrile\b/, /\bchills\b/, /\bsweats\b/],
+    signalPatterns: [/temp/, /temperature/, /heart/, /\bhr\b/, /hrv/],
+    explanation:
+      "Patient-reported fever/chills context is present with physiologic signals that may align with thermal or autonomic stress.",
+  },
+  {
+    id: "breathing_rr_spo2",
+    label: "Breathing pattern",
+    symptomPatterns: [
+      /shortness of breath/,
+      /\bsob\b/,
+      /trouble breathing/,
+      /difficulty breathing/,
+      /breathless/,
+      /cough/,
+      /chest tightness/,
+    ],
+    signalPatterns: [/resp/, /\brr\b/, /oxygen/, /spo2/, /sp_o2/, /heart/, /\bhr\b/],
+    explanation:
+      "Patient-reported breathing context is present with respiratory, oxygenation, or heart-rate signals that may align with that report.",
+  },
+  {
+    id: "fatigue_autonomic",
+    label: "Fatigue / weakness pattern",
+    symptomPatterns: [
+      /fatigue/,
+      /tired/,
+      /weak/,
+      /weakness/,
+      /dizzy/,
+      /dizziness/,
+      /lightheaded/,
+    ],
+    signalPatterns: [/heart/, /\bhr\b/, /hrv/, /oxygen/, /spo2/, /sp_o2/],
+    explanation:
+      "Patient-reported fatigue, weakness, or dizziness context is present with physiologic signals that may align with autonomic or oxygenation changes.",
+  },
+  {
+    id: "pain_stress",
+    label: "Pain / stress pattern",
+    symptomPatterns: [/pain/, /ache/, /aching/, /pressure/, /cramp/],
+    signalPatterns: [/heart/, /\bhr\b/, /resp/, /\brr\b/],
+    explanation:
+      "Patient-reported pain context is present with heart-rate or respiratory signals that may align with physiologic stress.",
+  },
+  {
+    id: "gi_autonomic",
+    label: "GI / hydration stress pattern",
+    symptomPatterns: [
+      /nausea/,
+      /vomit/,
+      /vomiting/,
+      /diarrhea/,
+      /dehydrated/,
+      /dehydration/,
+    ],
+    signalPatterns: [/heart/, /\bhr\b/, /hrv/],
+    explanation:
+      "Patient-reported GI or hydration-stress context is present with autonomic signals that may align with that report.",
+  },
+];
+
+const concordantSignals = concordanceRules
+  .map((rule) => {
+    const hasSymptom = rule.symptomPatterns.some((pattern) =>
+      pattern.test(symptomTextForMap)
+    );
+
+    if (!hasSymptom) return null;
+
+    const matchedSignals = normalizedEvidenceForMap.filter((signal) =>
+      rule.signalPatterns.some((pattern) => pattern.test(signal.combinedText))
+    );
+
+    if (!matchedSignals.length) return null;
+
+    return {
+      ...rule,
+      matchedSignals,
+    };
+  })
+  .filter(Boolean);
+
+const primarySymptomLabels = extractedSymptomsForMap
+  .filter(Boolean)
+  .slice(0, 2);
+
+const inferredConcernLabel =
+  primarySymptomLabels.length > 0
+    ? primarySymptomLabels.join(" + ")
+    : concordantSignals.length > 0
+      ? concordantSignals[0].label
+      : signalEvidence.length > 1
+        ? "Multiple physiologic changes"
+        : signalEvidence.length === 1
+          ? signalEvidence[0].label || "Single signal change"
+          : "Current signal review";
+
+const hasFusionContext =
+  concordantSignals.length > 0 ||
+  Boolean(currentSignalInsight?.overallStatus?.fusionScore) ||
+  Boolean(currentSignalInsight?.overallStatus?.clinician?.review) ||
+  Boolean(currentSignalInsight?.overallStatus?.temporalContext);
+
+const hasSignalMapData =
+  hasPatientReportedContext ||
+  hasVoiceContext ||
+  hasPhysiologicContext ||
+  hasFusionContext;
 
       if (!hasSignalMapData) {
         return (
@@ -2462,17 +2590,21 @@ const hasPhysiologicContext = signalEvidence.length > 0;
       };
 
       addNode({
-        id: "clinical_context",
-        label: "Current patient status",
-        group: "fusion",
-        detail:
-          currentSignalInsight?.overallStatus?.clinician?.review
-            ?.primaryFinding ||
-          currentSignalInsight?.overallStatus?.summary ||
-          "Available signals are shown as descriptive context only.",
-        fx: 0,
-        fy: 0,
-      });
+  id: "clinical_context",
+  label: inferredConcernLabel,
+  group: "fusion",
+  detail:
+    concordantSignals.length > 0
+      ? `Current review pattern based on patient-reported context and concordant physiologic signals: ${concordantSignals
+          .map((item) => item.label)
+          .join(", ")}.`
+      : currentSignalInsight?.overallStatus?.clinician?.review
+          ?.primaryFinding ||
+        currentSignalInsight?.overallStatus?.summary ||
+        "Available signals are shown as descriptive context only.",
+  fx: 0,
+  fy: 0,
+});
 
       if (hasPatientReportedContext) {
         addNode({
@@ -2643,35 +2775,44 @@ const hasPhysiologicContext = signalEvidence.length > 0;
         });
       }
 
-      if (hasFusionContext) {
-        const fusionScore =
-          currentSignalInsight?.overallStatus?.fusionScore || {};
+      if (concordantSignals.length > 0) {
+  addNode({
+    id: "concordant_signals",
+    label: "Concordant signals",
+    group: "fusion_detail",
+    detail:
+      "Patient-reported context and physiologic signal evidence appear aligned in the current review window.",
+    fx: 0,
+    fy: 165,
+  });
 
-        addNode({
-          id: "fusion_summary",
-          label: fusionScore.crossDomainConvergence
-            ? "Convergent signals"
-            : signalEvidence.length > 1
-            ? "Convergent signals"
-            : "Single-domain signal",
-          group: "fusion_detail",
-          detail:
-            currentSignalInsight?.overallStatus?.clinician?.review
-              ?.confidenceRationale ||
-            currentSignalInsight?.overallStatus?.temporalContext?.summary
-              ?.interpretation ||
-            "Fusion context is based only on available current signal evidence.",
-          fx: 0,
-          fy: 165,
-        });
+  addLink(
+    "concordant_signals",
+    "clinical_context",
+    "concordance",
+    "fusion"
+  );
 
-        addLink(
-          "fusion_summary",
-          "clinical_context",
-          "summary",
-          "fusion"
-        );
-      }
+  concordantSignals.forEach((item, index) => {
+    const id = `concordance_${item.id}`;
+
+    addNode({
+      id,
+      label: item.label,
+      group: "fusion_detail",
+      detail: clinicianizeText(item.explanation),
+      fx: -110 + index * 110,
+      fy: 250,
+    });
+
+    addLink(id, "concordant_signals", "aligned", "fusion");
+
+    item.matchedSignals.slice(0, 4).forEach((signal) => {
+      const signalId = `phys_${signal.signal || signal.id || signal.label}`;
+      addLink(signalId, id, "supports", "physiology");
+    });
+  });
+}
 
       const unavailableDomains = [
         !hasPatientReportedContext ? "patient-reported context" : null,
@@ -2687,9 +2828,9 @@ const hasPhysiologicContext = signalEvidence.length > 0;
       return (
         <>
           <div className="muted signal-map-intro">
-            This map shows available patient-reported, voice, physiologic, and
-            fusion context from the current review window. Domains without real
-            data are not inferred.
+            This map shows available patient-reported context, physiologic signals,
+	    and concordant signal patterns from the current review window. Domains
+            without real data are not inferred.
           </div>
 
           <div className="signal-map-legend">
