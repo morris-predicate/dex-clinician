@@ -2371,214 +2371,430 @@ const canShowTemporalTrajectory =
     Signal Intelligence Map
   </div>
 
-  <div className="detail-card">
+  <div className="detail-card signal-map-card">
     {currentSignalInsightLoading ? (
-  <div className="empty-state-small">
-    Loading signal map…
-  </div>
-) : currentSignalInsight?.overallStatus?.signalEvidence?.length ? (
-      <>
-        <div className="muted" style={{ marginBottom: 12, lineHeight: 1.5 }}>
-  This map shows how patient-reported symptoms, voice features, and physiologic
-  signals relate to the current clinical context.
-</div>
+      <div className="empty-state-small">
+        Loading signal map…
+      </div>
+    ) : (() => {
+      const signalEvidence =
+        currentSignalInsight?.overallStatus?.signalEvidence || [];
 
-<div
-  style={{
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 14,
-  }}
->
-  <span style={legendPill("#FEF3C7")}>Patient-reported</span>
-  <span style={legendPill("#EEF2FF")}>Voice signal</span>
-  <span style={legendPill("#ECFDF5")}>Physiologic signal</span>
-  <span style={legendPill("#111827", "#FFFFFF")}>Fusion context</span>
-</div>
+      const patientSymptoms = (extractedSymptoms || [])
+        .filter(Boolean)
+        .slice(0, 6);
 
-<div
-  style={{
-    border: "1px solid #E5E7EB",
-    borderRadius: 14,
-    background: "#FFFFFF",
-    overflow: "hidden",
-  }}
->
-<ForceGraph2D
-  ref={graphRef}
-  graphData={{
-    nodes: [
-      {
-        id: "fusion_context",
-        label: "Clinical signal context",
+      const hasPatientReportedContext =
+        Boolean(patientReportedText) || patientSymptoms.length > 0;
+
+      const hasVoiceContext =
+        Boolean(latestVoiceAt) ||
+        Boolean(voiceDeviation?.compared) ||
+        (voiceSignals || []).length > 0;
+
+      const hasPhysiologicContext = signalEvidence.length > 0;
+
+      const hasFusionContext =
+        Boolean(currentSignalInsight?.overallStatus?.fusionScore) ||
+        Boolean(currentSignalInsight?.overallStatus?.clinician?.review) ||
+        Boolean(currentSignalInsight?.overallStatus?.temporalContext);
+
+      const hasSignalMapData =
+        hasPatientReportedContext ||
+        hasVoiceContext ||
+        hasPhysiologicContext ||
+        hasFusionContext;
+
+      if (!hasSignalMapData) {
+        return (
+          <div className="empty-state-small">
+            Signal intelligence unavailable
+          </div>
+        );
+      }
+
+      const nodes = [];
+      const links = [];
+      const added = new Set();
+
+      const addNode = (node) => {
+        if (!node?.id || added.has(node.id)) return;
+        added.add(node.id);
+        nodes.push(node);
+      };
+
+      const addLink = (source, target, label, group = "relationship") => {
+        if (!source || !target) return;
+        links.push({ source, target, label, group });
+      };
+
+      addNode({
+        id: "clinical_context",
+        label: "Current signal context",
         group: "fusion",
+        detail:
+          currentSignalInsight?.overallStatus?.clinician?.review
+            ?.primaryFinding ||
+          currentSignalInsight?.overallStatus?.summary ||
+          "Available signals are shown as descriptive context only.",
         fx: 0,
         fy: 0,
-      },
+      });
 
-      ...(currentSignalInsight?.overallStatus?.signalEvidence || []).map(
-        (signal, index) => ({
-          id: signal.signal,
-          label: signal.label,
-          clinicalContext: signal.explanation,
-          group: "vital_signal",
+      if (hasPatientReportedContext) {
+        addNode({
+          id: "patient_reported_domain",
+          label: "Patient-reported",
+          group: "patient",
+          detail:
+            patientReportedText ||
+            patientSymptoms.join(", ") ||
+            "Patient-reported context available.",
+          fx: -250,
+          fy: -115,
+        });
 
-          fx:
-            Math.cos(
-              (index /
-                currentSignalInsight.overallStatus
-                  .signalEvidence.length) *
-                Math.PI *
-                2
-            ) * 240,
+        addLink(
+          "patient_reported_domain",
+          "clinical_context",
+          "reported context",
+          "patient"
+        );
 
-          fy:
-            Math.sin(
-              (index /
-                currentSignalInsight.overallStatus
-                  .signalEvidence.length) *
-                Math.PI *
-                2
-            ) * 140,
-        })
-      ),
-    ],
+        if (patientReportedText) {
+          addNode({
+            id: "reported_quote",
+            label: "Reported statement",
+            group: "patient_detail",
+            detail: patientReportedText,
+            fx: -390,
+            fy: -175,
+          });
 
-    links: (
-      currentSignalInsight?.overallStatus?.signalEvidence || []
-    ).map((signal) => ({
-      source: signal.signal,
-      target: "fusion_context",
-      label: signal.direction,
-    })),
-  }}
+          addLink(
+            "reported_quote",
+            "patient_reported_domain",
+            "source",
+            "patient"
+          );
+        }
 
-  width={Math.max(window.innerWidth - 280, 800)}
-  height={420}
+        patientSymptoms.forEach((symptom, index) => {
+          const id = `symptom_${index}`;
+          addNode({
+            id,
+            label: symptom,
+            group: "patient_detail",
+            detail: `Extracted patient-reported context: ${symptom}`,
+            fx: -405 + index * 30,
+            fy: -40 + index * 22,
+          });
 
-  cooldownTicks={0}
-  enableZoomInteraction={false}
-  enablePanInteraction={false}
-  enableNodeDrag={false}
+          addLink(id, "patient_reported_domain", "reported", "patient");
+        });
+      }
 
-  nodeLabel={(node) =>
-    `${node.label}\n\n${node.clinicalContext || ""}`
-  }
+      if (hasVoiceContext) {
+        addNode({
+          id: "voice_domain",
+          label: "Voice signal",
+          group: "voice",
+          detail: voiceDeviation?.compared
+            ? `Voice compared with baseline: ${titleCase(
+                voiceDeviation.deviationLevel
+              )}.`
+            : latestVoiceAt
+              ? "Voice entry captured. Baseline comparison may be limited."
+              : "Voice context available.",
+          fx: 0,
+          fy: -185,
+        });
 
-  nodeRelSize={10}
+        addLink(
+          "voice_domain",
+          "clinical_context",
+          "voice context",
+          "voice"
+        );
 
-  linkDirectionalArrowLength={4}
-  linkDirectionalArrowRelPos={1}
-  linkCurvature={0.1}
+        (voiceSignals || []).slice(0, 5).forEach((signal, index) => {
+          const id = `voice_signal_${signal.signal || signal.id || index}`;
 
-  nodeCanvasObject={(node, ctx, globalScale) => {
-    const label = node.label;
-    const fontSize = 12 / globalScale;
+          addNode({
+            id,
+            label: signal.label || signal.signal || "Voice feature",
+            group: "voice_detail",
+            detail: clinicianizeText(
+              signal.explanation ||
+                signal.interpretation ||
+                "Voice signal context detected."
+            ),
+            fx: -80 + index * 42,
+            fy: -300,
+          });
 
-    ctx.font = `${fontSize}px Sans-Serif`;
+          addLink(id, "voice_domain", "feature", "voice");
+        });
 
-    const textWidth = ctx.measureText(label).width;
-    const padding = 6 / globalScale;
-    const radius = 8 / globalScale;
+        if (!voiceSignals?.length && voiceDeviation?.compared) {
+          addNode({
+            id: "voice_baseline_comparison",
+            label: "Voice baseline comparison",
+            group: "voice_detail",
+            detail: `Voice comparison level: ${titleCase(
+              voiceDeviation.deviationLevel
+            )}.`,
+            fx: 105,
+            fy: -280,
+          });
 
-    ctx.fillStyle =
-      node.group === "fusion"
-        ? "#111827"
-        : "#ECFDF5";
+          addLink(
+            "voice_baseline_comparison",
+            "voice_domain",
+            "baseline comparison",
+            "voice"
+          );
+        }
+      }
 
-    ctx.strokeStyle =
-      node.group === "fusion"
-        ? "#111827"
-        : "#CBD5E1";
+      if (hasPhysiologicContext) {
+        addNode({
+          id: "physiology_domain",
+          label: "Physiologic signal",
+          group: "physiology",
+          detail: `${signalEvidence.length} physiologic signal${
+            signalEvidence.length === 1 ? "" : "s"
+          } contributed to the current review window.`,
+          fx: 250,
+          fy: -95,
+        });
 
-    ctx.lineWidth = 1 / globalScale;
+        addLink(
+          "physiology_domain",
+          "clinical_context",
+          "physiologic context",
+          "physiology"
+        );
 
-    const x = node.x - textWidth / 2 - padding;
-    const y = node.y - fontSize / 2 - padding;
-    const w = textWidth + padding * 2;
-    const h = fontSize + padding * 2;
+        signalEvidence.forEach((signal, index) => {
+          const id = `phys_${signal.signal || signal.id || index}`;
 
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + w - radius, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-    ctx.lineTo(x + w, y + h - radius);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-    ctx.lineTo(x + radius, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
+          addNode({
+            id,
+            label: signal.label || signal.signal || "Physiologic signal",
+            group: "physiology_detail",
+            detail: clinicianizeText(
+              signal.explanation ||
+                signal.interpretation ||
+                `${signal.label || "Signal"} changed compared with baseline.`
+            ),
+            direction: signal.direction,
+            magnitude: signal.magnitude,
+            severity: signal.severity,
+            fx:
+              360 +
+              Math.cos((index / Math.max(signalEvidence.length, 1)) * Math.PI * 2) *
+                95,
+            fy:
+              -35 +
+              Math.sin((index / Math.max(signalEvidence.length, 1)) * Math.PI * 2) *
+                85,
+          });
 
-    ctx.fill();
-    ctx.stroke();
+          addLink(
+            id,
+            "physiology_domain",
+            signal.direction || "changed",
+            "physiology"
+          );
+        });
+      }
 
-    ctx.fillStyle =
-      node.group === "fusion"
-        ? "#FFFFFF"
-        : "#111827";
+      if (hasFusionContext) {
+        const fusionScore =
+          currentSignalInsight?.overallStatus?.fusionScore || {};
 
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, node.x, node.y);
-  }}
+        addNode({
+          id: "fusion_summary",
+          label: fusionScore.crossDomainConvergence
+            ? "Cross-domain convergence"
+            : signalEvidence.length > 1
+              ? "Multi-signal context"
+              : "Single-domain context",
+          group: "fusion_detail",
+          detail:
+            currentSignalInsight?.overallStatus?.clinician?.review
+              ?.confidenceRationale ||
+            currentSignalInsight?.overallStatus?.temporalContext?.summary
+              ?.interpretation ||
+            "Fusion context is based only on available current signal evidence.",
+          fx: 0,
+          fy: 165,
+        });
 
-  onNodeClick={(node) =>
-    setSelectedSignalNode(node)
-  }
-/>
-</div>
+        addLink(
+          "fusion_summary",
+          "clinical_context",
+          "summary",
+          "fusion"
+        );
+      }
 
-{selectedSignalNode && (
-  <div
-    style={{
-      marginTop: 12,
-      padding: 14,
-      border: "1px solid #E5E7EB",
-      borderRadius: 12,
-      background: "#F9FAFB",
-    }}
-  >
-    <div
-      style={{
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        color: "#64748B",
-        marginBottom: 6,
-        fontWeight: 700,
-      }}
-    >
-      Selected signal
-    </div>
+      const unavailableDomains = [
+        !hasPatientReportedContext ? "patient-reported context" : null,
+        !hasVoiceContext ? "voice signal context" : null,
+        !hasPhysiologicContext ? "physiologic signal context" : null,
+      ].filter(Boolean);
 
-    <div style={{ fontWeight: 700, marginBottom: 6 }}>
-      {selectedSignalNode.label}
-    </div>
+      const graphWidth =
+        typeof window !== "undefined"
+          ? Math.max(Math.min(window.innerWidth - 320, 1080), 760)
+          : 900;
 
-    <div className="muted" style={{ lineHeight: 1.5 }}>
-      {selectedSignalNode.clinicalContext}
-    </div>
-  </div>
-)}
+      return (
+        <>
+          <div className="muted signal-map-intro">
+            This map shows available patient-reported, voice, physiologic, and
+            fusion context from the current review window. Domains without real
+            data are not inferred.
+          </div>
 
-        <div
-  className="muted"
-  style={{
-    marginTop: 12,
-    fontSize: 12,
-  }}
->
-  {currentSignalInsight?.disclaimer ||
-    "Descriptive signal intelligence only. Not diagnostic."}
-</div>
-      </>
-    ) : (
-      <div className="empty-state-small">
-        Signal intelligence map unavailable
-      </div>
-    )}
+          <div className="signal-map-legend">
+            <span className="signal-map-pill signal-map-pill-patient">
+              Patient-reported
+            </span>
+            <span className="signal-map-pill signal-map-pill-voice">
+              Voice signal
+            </span>
+            <span className="signal-map-pill signal-map-pill-physiology">
+              Physiologic signal
+            </span>
+            <span className="signal-map-pill signal-map-pill-fusion">
+              Fusion context
+            </span>
+          </div>
+
+          <div className="signal-map-shell">
+            <ForceGraph2D
+              ref={graphRef}
+              graphData={{ nodes, links }}
+              width={graphWidth}
+              height={440}
+              cooldownTicks={0}
+              enableZoomInteraction={false}
+              enablePanInteraction={false}
+              enableNodeDrag={false}
+              nodeRelSize={8}
+              linkWidth={(link) =>
+                link.group === "fusion" ? 1.8 : 1.2
+              }
+              linkColor={(link) => {
+                if (link.group === "patient") return "rgba(251, 191, 36, 0.58)";
+                if (link.group === "voice") return "rgba(129, 140, 248, 0.58)";
+                if (link.group === "physiology") return "rgba(45, 212, 191, 0.58)";
+                if (link.group === "fusion") return "rgba(248, 250, 252, 0.64)";
+                return "rgba(148, 163, 184, 0.42)";
+              }}
+              linkDirectionalParticles={1}
+              linkDirectionalParticleWidth={1.4}
+              linkDirectionalArrowLength={4}
+              linkDirectionalArrowRelPos={1}
+              linkCurvature={0.08}
+              nodeLabel={(node) =>
+                `${node.label}\n\n${node.detail || "Available signal context."}`
+              }
+              nodeCanvasObject={(node, ctx, globalScale) => {
+                const label = node.label || "";
+                const fontSize = Math.max(10 / globalScale, 8);
+                const radius =
+                  node.group === "fusion"
+                    ? 20 / globalScale
+                    : node.group?.includes("detail")
+                      ? 10 / globalScale
+                      : 15 / globalScale;
+
+                const colorMap = {
+                  fusion: "#F8FAFC",
+                  fusion_detail: "#CBD5E1",
+                  patient: "#FBBF24",
+                  patient_detail: "#FDE68A",
+                  voice: "#818CF8",
+                  voice_detail: "#C4B5FD",
+                  physiology: "#2DD4BF",
+                  physiology_detail: "#99F6E4",
+                };
+
+                const nodeColor = colorMap[node.group] || "#CBD5E1";
+                const x = node.x || 0;
+                const y = node.y || 0;
+
+                ctx.save();
+
+                ctx.shadowColor = nodeColor;
+                ctx.shadowBlur = node.group === "fusion" ? 22 : 13;
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                ctx.fillStyle =
+                  node.group === "fusion"
+                    ? "rgba(15, 23, 42, 0.96)"
+                    : "rgba(15, 23, 42, 0.82)";
+                ctx.fill();
+
+                ctx.lineWidth = node.group === "fusion" ? 2.2 / globalScale : 1.2 / globalScale;
+                ctx.strokeStyle = nodeColor;
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.font = `700 ${fontSize}px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                ctx.fillStyle = "#E5E7EB";
+
+                const maxLabelWidth = 145 / globalScale;
+                const words = label.split(" ");
+                const lines = [];
+                let line = "";
+
+                words.forEach((word) => {
+                  const test = line ? `${line} ${word}` : word;
+                  if (ctx.measureText(test).width > maxLabelWidth && line) {
+                    lines.push(line);
+                    line = word;
+                  } else {
+                    line = test;
+                  }
+                });
+
+                if (line) lines.push(line);
+
+                lines.slice(0, 2).forEach((textLine, index) => {
+                  ctx.fillText(
+                    textLine,
+                    x,
+                    y + radius + 6 / globalScale + index * (fontSize + 2 / globalScale)
+                  );
+                });
+
+                ctx.restore();
+              }}
+            />
+          </div>
+
+          {unavailableDomains.length > 0 && (
+            <div className="signal-map-unavailable">
+              Not shown because real data are not available in this review
+              window: {unavailableDomains.join(", ")}.
+            </div>
+          )}
+
+          <div className="signal-map-disclaimer">
+            Descriptive signal context only. This map does not diagnose,
+            predict, or recommend treatment.
+          </div>
+        </>
+      );
+    })()}
   </div>
 </section>
 </>
