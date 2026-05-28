@@ -2364,7 +2364,7 @@ const canShowTemporalTrajectory =
 
 {hasCurrentSignalEvidence && (
 <>
-{/* ── Signal Intelligence Map ─────────────────────────────────── */}
+{/* ── Signal Intelligence Map / Review Recommendation Lineage ───────────── */}
 <section className="detail-section">
   <div className="detail-section-title">
     Signal Intelligence Map
@@ -2373,198 +2373,249 @@ const canShowTemporalTrajectory =
   <div className="detail-card signal-map-card">
     {currentSignalInsightLoading ? (
       <div className="empty-state-small">
-        Loading signal map…
+        Loading signal lineage…
       </div>
     ) : (() => {
       const signalEvidence =
-  currentSignalInsight?.overallStatus?.signalEvidence || [];
+        currentSignalInsight?.overallStatus?.signalEvidence || [];
 
-const patientReportedTextForMap =
-  patient?.latestTranscriptSummary ||
-  patient?.latestPatientStatement ||
-  patient?.latestVoiceText ||
-  patient?.latestSessionText ||
-  null;
+      const patientReportedTextForMap =
+        patient?.latestTranscriptSummary ||
+        patient?.latestPatientStatement ||
+        patient?.latestVoiceText ||
+        patient?.latestSessionText ||
+        null;
 
-const extractedSymptomsForMap = (entities || [])
-  .filter((entity) => entity.category === "MEDICAL_CONDITION")
-  .map((entity) => entity.text)
-  .filter(Boolean);
+      const extractedSymptomsForMap = (entities || [])
+        .filter((entity) => entity.category === "MEDICAL_CONDITION")
+        .map((entity) => entity.text)
+        .filter(Boolean);
 
-const latestVoiceAtForMap = patient?.latestSessionAt
-  ? new Date(patient.latestSessionAt)
-  : null;
+      const latestVoiceAtForMap = patient?.latestSessionAt
+        ? new Date(patient.latestSessionAt)
+        : null;
 
-const voiceSignalsForMap = signalEvidence.filter((signal) => {
-  const id = String(signal.signal || signal.id || "").toLowerCase();
-  const label = String(signal.label || "").toLowerCase();
+      const voiceSignalsForMap = signalEvidence.filter((signal) => {
+        const id = String(signal.signal || signal.id || "").toLowerCase();
+        const label = String(signal.label || "").toLowerCase();
 
-  return (
-    id.includes("voice") ||
-    id.includes("speech") ||
-    id.includes("pause") ||
-    id.includes("tempo") ||
-    id.includes("hesitation") ||
-    label.includes("voice") ||
-    label.includes("speech") ||
-    label.includes("pause") ||
-    label.includes("tempo") ||
-    label.includes("hesitation")
-  );
-});
+        return (
+          id.includes("voice") ||
+          id.includes("speech") ||
+          id.includes("pause") ||
+          id.includes("tempo") ||
+          id.includes("hesitation") ||
+          label.includes("voice") ||
+          label.includes("speech") ||
+          label.includes("pause") ||
+          label.includes("tempo") ||
+          label.includes("hesitation")
+        );
+      });
 
-const patientSymptoms = extractedSymptomsForMap
-  .filter(Boolean)
-  .slice(0, 6);
+      const physiologicSignalsForMap = signalEvidence.filter((signal) => {
+        const id = String(signal.signal || signal.id || "").toLowerCase();
+        const label = String(signal.label || "").toLowerCase();
 
-const hasPatientReportedContext =
-  Boolean(patientReportedTextForMap) || patientSymptoms.length > 0;
+        return (
+          id.includes("heart") ||
+          id.includes("hr") ||
+          id.includes("resp") ||
+          id.includes("rr") ||
+          id.includes("spo2") ||
+          id.includes("oxygen") ||
+          id.includes("temp") ||
+          id.includes("hrv") ||
+          label.includes("heart") ||
+          label.includes("resp") ||
+          label.includes("oxygen") ||
+          label.includes("spo") ||
+          label.includes("temp") ||
+          label.includes("hrv")
+        );
+      });
 
-const hasVoiceContext =
-  Boolean(latestVoiceAtForMap) ||
-  Boolean(voiceDeviation?.compared) ||
-  voiceSignalsForMap.length > 0;
+      const otherSignalsForMap = signalEvidence.filter(
+        (signal) =>
+          !physiologicSignalsForMap.includes(signal) &&
+          !voiceSignalsForMap.includes(signal)
+      );
 
-const hasPhysiologicContext = signalEvidence.length > 0;
+      const patientSymptoms = extractedSymptomsForMap
+        .filter(Boolean)
+        .slice(0, 6);
 
-const symptomTextForMap = [
-  patientReportedTextForMap,
-  ...extractedSymptomsForMap,
-]
-  .filter(Boolean)
-  .join(" ")
-  .toLowerCase();
+      const hasPatientReportedContext =
+        Boolean(patientReportedTextForMap) || patientSymptoms.length > 0;
 
-const normalizedEvidenceForMap = signalEvidence.map((signal) => {
-  const id = String(signal.signal || signal.id || "").toLowerCase();
-  const label = String(signal.label || "").toLowerCase();
+      const hasVoiceContext =
+        Boolean(latestVoiceAtForMap) ||
+        Boolean(voiceDeviation?.compared) ||
+        voiceSignalsForMap.length > 0;
 
-  return {
-    ...signal,
-    normalizedId: id,
-    normalizedLabel: label,
-    combinedText: `${id} ${label}`,
-  };
-});
+      const hasPhysiologicContext = physiologicSignalsForMap.length > 0;
+      const hasOtherSignalContext = otherSignalsForMap.length > 0;
 
-const hasEvidenceMatch = (patterns = []) =>
-  normalizedEvidenceForMap.some((signal) =>
-    patterns.some((pattern) => pattern.test(signal.combinedText))
-  );
+      const reviewText =
+        fusionSummary?.fusionSummary?.priorityLabel ||
+        currentSignalInsight?.overallStatus?.clinician?.review
+          ?.recommendedReview ||
+        currentSignalInsight?.overallStatus?.clinician?.review
+          ?.primaryFinding ||
+        currentSignalInsight?.overallStatus?.title ||
+        "Review signal context";
 
-const concordanceRules = [
-  {
-    id: "fever_temp_hr",
-    label: "Fever pattern",
-    symptomPatterns: [/\bfever\b/, /\bfebrile\b/, /\bchills\b/, /\bsweats\b/],
-    signalPatterns: [/temp/, /temperature/, /heart/, /\bhr\b/, /hrv/],
-    explanation:
-      "Patient-reported fever/chills context is present with physiologic signals that may align with thermal or autonomic stress.",
-  },
-  {
-    id: "breathing_rr_spo2",
-    label: "Breathing pattern",
-    symptomPatterns: [
-      /shortness of breath/,
-      /\bsob\b/,
-      /trouble breathing/,
-      /difficulty breathing/,
-      /breathless/,
-      /cough/,
-      /chest tightness/,
-    ],
-    signalPatterns: [/resp/, /\brr\b/, /oxygen/, /spo2/, /sp_o2/, /heart/, /\bhr\b/],
-    explanation:
-      "Patient-reported breathing context is present with respiratory, oxygenation, or heart-rate signals that may align with that report.",
-  },
-  {
-    id: "fatigue_autonomic",
-    label: "Fatigue / weakness pattern",
-    symptomPatterns: [
-      /fatigue/,
-      /tired/,
-      /weak/,
-      /weakness/,
-      /dizzy/,
-      /dizziness/,
-      /lightheaded/,
-    ],
-    signalPatterns: [/heart/, /\bhr\b/, /hrv/, /oxygen/, /spo2/, /sp_o2/],
-    explanation:
-      "Patient-reported fatigue, weakness, or dizziness context is present with physiologic signals that may align with autonomic or oxygenation changes.",
-  },
-  {
-    id: "pain_stress",
-    label: "Pain / stress pattern",
-    symptomPatterns: [/pain/, /ache/, /aching/, /pressure/, /cramp/],
-    signalPatterns: [/heart/, /\bhr\b/, /resp/, /\brr\b/],
-    explanation:
-      "Patient-reported pain context is present with heart-rate or respiratory signals that may align with physiologic stress.",
-  },
-  {
-    id: "gi_autonomic",
-    label: "GI / hydration stress pattern",
-    symptomPatterns: [
-      /nausea/,
-      /vomit/,
-      /vomiting/,
-      /diarrhea/,
-      /dehydrated/,
-      /dehydration/,
-    ],
-    signalPatterns: [/heart/, /\bhr\b/, /hrv/],
-    explanation:
-      "Patient-reported GI or hydration-stress context is present with autonomic signals that may align with that report.",
-  },
-];
+      const reviewPriorityLabel =
+        String(reviewText).length > 34
+          ? "Recommended for review"
+          : reviewText;
 
-const concordantSignals = concordanceRules
-  .map((rule) => {
-    const hasSymptom = rule.symptomPatterns.some((pattern) =>
-      pattern.test(symptomTextForMap)
-    );
+      const reviewRationale =
+        currentSignalInsight?.overallStatus?.clinician?.review
+          ?.confidenceRationale ||
+        currentSignalInsight?.overallStatus?.clinician?.review
+          ?.primaryFinding ||
+        currentSignalInsight?.overallStatus?.temporalContext?.summary
+          ?.interpretation ||
+        fusionSummary?.fusionSummary?.soWhat ||
+        "Review priority is based on available signal changes in the current review window.";
 
-    if (!hasSymptom) return null;
+      const symptomTextForMap = [
+        patientReportedTextForMap,
+        ...extractedSymptomsForMap,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-    const matchedSignals = normalizedEvidenceForMap.filter((signal) =>
-      rule.signalPatterns.some((pattern) => pattern.test(signal.combinedText))
-    );
+      const normalizedPhysiologyForMap = physiologicSignalsForMap.map(
+        (signal, index) => {
+          const id = String(signal.signal || signal.id || "").toLowerCase();
+          const label = String(signal.label || "").toLowerCase();
+          const nodeId = `phys_${signal.signal || signal.id || index}`;
 
-    if (!matchedSignals.length) return null;
+          return {
+            ...signal,
+            nodeId,
+            normalizedId: id,
+            normalizedLabel: label,
+            combinedText: `${id} ${label}`,
+          };
+        }
+      );
 
-    return {
-      ...rule,
-      matchedSignals,
-    };
-  })
-  .filter(Boolean);
+      const concordanceRules = [
+        {
+          id: "fever_temp_hr",
+          label: "Fever-related alignment",
+          symptomPatterns: [
+            /\bfever\b/,
+            /\bfebrile\b/,
+            /\bchills\b/,
+            /\bsweats\b/,
+          ],
+          signalPatterns: [/temp/, /temperature/, /heart/, /\bhr\b/, /hrv/],
+          explanation:
+            "Patient-reported fever/chills context aligns with temperature, heart-rate, or HRV signal changes.",
+        },
+        {
+          id: "breathing_rr_spo2",
+          label: "Breathing-related alignment",
+          symptomPatterns: [
+            /shortness of breath/,
+            /\bsob\b/,
+            /trouble breathing/,
+            /difficulty breathing/,
+            /breathless/,
+            /cough/,
+            /chest tightness/,
+          ],
+          signalPatterns: [
+            /resp/,
+            /\brr\b/,
+            /oxygen/,
+            /spo2/,
+            /sp_o2/,
+            /heart/,
+            /\bhr\b/,
+          ],
+          explanation:
+            "Patient-reported breathing context aligns with respiratory, oxygenation, or heart-rate signal changes.",
+        },
+        {
+          id: "fatigue_autonomic",
+          label: "Fatigue / weakness alignment",
+          symptomPatterns: [
+            /fatigue/,
+            /tired/,
+            /weak/,
+            /weakness/,
+            /dizzy/,
+            /dizziness/,
+            /lightheaded/,
+          ],
+          signalPatterns: [/heart/, /\bhr\b/, /hrv/, /oxygen/, /spo2/, /sp_o2/],
+          explanation:
+            "Patient-reported fatigue, weakness, or dizziness context aligns with autonomic or oxygenation signal changes.",
+        },
+        {
+          id: "pain_stress",
+          label: "Pain / stress alignment",
+          symptomPatterns: [/pain/, /ache/, /aching/, /pressure/, /cramp/],
+          signalPatterns: [/heart/, /\bhr\b/, /resp/, /\brr\b/],
+          explanation:
+            "Patient-reported pain context aligns with heart-rate or respiratory signal changes.",
+        },
+        {
+          id: "gi_autonomic",
+          label: "GI / hydration-stress alignment",
+          symptomPatterns: [
+            /nausea/,
+            /vomit/,
+            /vomiting/,
+            /diarrhea/,
+            /dehydrated/,
+            /dehydration/,
+            /abdominal/,
+            /stomach/,
+          ],
+          signalPatterns: [/heart/, /\bhr\b/, /hrv/],
+          explanation:
+            "Patient-reported GI or hydration-stress context aligns with autonomic signal changes.",
+        },
+      ];
 
-const primarySymptomLabels = extractedSymptomsForMap
-  .filter(Boolean)
-  .slice(0, 2);
+      const concordantSignals = concordanceRules
+        .map((rule) => {
+          const hasSymptom = rule.symptomPatterns.some((pattern) =>
+            pattern.test(symptomTextForMap)
+          );
 
-const inferredConcernLabel =
-  primarySymptomLabels.length > 0
-    ? primarySymptomLabels.join(" + ")
-    : concordantSignals.length > 0
-      ? concordantSignals[0].label
-      : signalEvidence.length > 1
-        ? "Multiple physiologic changes"
-        : signalEvidence.length === 1
-          ? signalEvidence[0].label || "Single signal change"
-          : "Current signal review";
+          if (!hasSymptom) return null;
 
-const hasFusionContext =
-  concordantSignals.length > 0 ||
-  Boolean(currentSignalInsight?.overallStatus?.fusionScore) ||
-  Boolean(currentSignalInsight?.overallStatus?.clinician?.review) ||
-  Boolean(currentSignalInsight?.overallStatus?.temporalContext);
+          const matchedSignals = normalizedPhysiologyForMap.filter((signal) =>
+            rule.signalPatterns.some((pattern) =>
+              pattern.test(signal.combinedText)
+            )
+          );
 
-const hasSignalMapData =
-  hasPatientReportedContext ||
-  hasVoiceContext ||
-  hasPhysiologicContext ||
-  hasFusionContext;
+          if (!matchedSignals.length) return null;
+
+          return {
+            ...rule,
+            matchedSignals,
+          };
+        })
+        .filter(Boolean);
+
+      const hasConcordantSignals = concordantSignals.length > 0;
+
+      const hasSignalMapData =
+        hasPatientReportedContext ||
+        hasVoiceContext ||
+        hasPhysiologicContext ||
+        hasOtherSignalContext ||
+        Boolean(reviewPriorityLabel);
 
       if (!hasSignalMapData) {
         return (
@@ -2590,38 +2641,50 @@ const hasSignalMapData =
       };
 
       addNode({
-  id: "clinical_context",
-  label: inferredConcernLabel,
-  group: "fusion",
-  detail:
-    concordantSignals.length > 0
-      ? `Current review pattern based on patient-reported context and concordant physiologic signals: ${concordantSignals
-          .map((item) => item.label)
-          .join(", ")}.`
-      : currentSignalInsight?.overallStatus?.clinician?.review
-          ?.primaryFinding ||
-        currentSignalInsight?.overallStatus?.summary ||
-        "Available signals are shown as descriptive context only.",
-  fx: 0,
-  fy: 0,
-});
+        id: "review_output",
+        label: reviewPriorityLabel,
+        group: "output",
+        detail: clinicianizeText(reviewRationale),
+        category: "Recommendation output",
+        fx: 0,
+        fy: 0,
+      });
+
+      addNode({
+        id: "lineage_summary",
+        label: "Why this patient?",
+        group: "output_detail",
+        detail:
+          "This node summarizes how available inputs contribute to the review recommendation.",
+        category: "Explainability",
+        fx: 0,
+        fy: 145,
+      });
+
+      addLink(
+        "lineage_summary",
+        "review_output",
+        "explains recommendation",
+        "output"
+      );
 
       if (hasPatientReportedContext) {
         addNode({
           id: "patient_reported_domain",
-          label: "Patient-reported",
+          label: "Patient-reported input",
           group: "patient",
           detail:
             patientReportedTextForMap ||
             patientSymptoms.join(", ") ||
-            "Patient-reported context available.",
-          fx: -250,
-          fy: -115,
+            "Patient-reported context is available.",
+          category: "Input",
+          fx: -300,
+          fy: -120,
         });
 
         addLink(
           "patient_reported_domain",
-          "clinical_context",
+          "lineage_summary",
           "reported context",
           "patient"
         );
@@ -2629,11 +2692,12 @@ const hasSignalMapData =
         if (patientReportedTextForMap) {
           addNode({
             id: "reported_quote",
-            label: "Reported statement",
+            label: "Patient statement",
             group: "patient_detail",
             detail: patientReportedTextForMap,
-            fx: -390,
-            fy: -175,
+            category: "Patient-reported input",
+            fx: -460,
+            fy: -195,
           });
 
           addLink(
@@ -2646,23 +2710,94 @@ const hasSignalMapData =
 
         patientSymptoms.forEach((symptom, index) => {
           const id = `symptom_${index}`;
+
           addNode({
             id,
             label: symptom,
             group: "patient_detail",
             detail: `Extracted patient-reported context: ${symptom}`,
-            fx: -405 + index * 30,
-            fy: -40 + index * 22,
+            category: "Patient-reported input",
+            fx: -455 + index * 35,
+            fy: -35 + index * 28,
           });
 
-          addLink(id, "patient_reported_domain", "reported", "patient");
+          addLink(id, "patient_reported_domain", "reported symptom", "patient");
+        });
+      }
+
+      if (hasPhysiologicContext) {
+        addNode({
+          id: "physiology_domain",
+          label: "Physiologic signal changes",
+          group: "physiology",
+          detail: `${physiologicSignalsForMap.length} physiologic signal${
+            physiologicSignalsForMap.length === 1 ? "" : "s"
+          } contributed to the current review context.`,
+          category: "Input",
+          fx: 300,
+          fy: -115,
+        });
+
+        addLink(
+          "physiology_domain",
+          "lineage_summary",
+          "signal contribution",
+          "physiology"
+        );
+
+        normalizedPhysiologyForMap.forEach((signal, index) => {
+          addNode({
+            id: signal.nodeId,
+            label: signal.label || signal.signal || "Physiologic signal",
+            group: "physiology_detail",
+            detail: clinicianizeText(
+              signal.explanation ||
+                signal.interpretation ||
+                `${signal.label || "Signal"} changed compared with baseline.`
+            ),
+            category: "Physiologic signal",
+            direction: signal.direction,
+            magnitude: signal.magnitude,
+            severity: signal.severity,
+            contributionScore: signal.score,
+            fx:
+              430 +
+              Math.cos(
+                (index / Math.max(normalizedPhysiologyForMap.length, 1)) *
+                  Math.PI *
+                  2
+              ) *
+                95,
+            fy:
+              -70 +
+              Math.sin(
+                (index / Math.max(normalizedPhysiologyForMap.length, 1)) *
+                  Math.PI *
+                  2
+              ) *
+                82,
+          });
+
+          addLink(
+            signal.nodeId,
+            "physiology_domain",
+            signal.direction || "changed from baseline",
+            "physiology"
+          );
+
+          addLink(
+            signal.nodeId,
+            "lineage_summary",
+            "contributes",
+            "physiology"
+          );
         });
       }
 
       if (hasVoiceContext) {
         addNode({
           id: "voice_domain",
-          label: "Voice signal",
+          label: "Voice signal input",
           group: "voice",
           detail: voiceDeviation?.compared
             ? `Voice compared with baseline: ${titleCase(
@@ -2671,18 +2806,19 @@ const hasSignalMapData =
             : latestVoiceAtForMap
               ? "Voice entry captured. Baseline comparison may be limited."
               : "Voice context available.",
+          category: "Input",
           fx: 0,
-          fy: -185,
+          fy: -220,
         });
 
         addLink(
           "voice_domain",
-          "clinical_context",
+          "lineage_summary",
           "voice context",
           "voice"
         );
 
-        (voiceSignalsForMap || []).slice(0, 5).forEach((signal, index) => {
+        voiceSignalsForMap.slice(0, 5).forEach((signal, index) => {
           const id = `voice_signal_${signal.signal || signal.id || index}`;
 
           addNode({
@@ -2694,14 +2830,15 @@ const hasSignalMapData =
                 signal.interpretation ||
                 "Voice signal context detected."
             ),
-            fx: -80 + index * 42,
-            fy: -300,
+            category: "Voice signal",
+            fx: -90 + index * 48,
+            fy: -330,
           });
 
-          addLink(id, "voice_domain", "feature", "voice");
+          addLink(id, "voice_domain", "voice feature", "voice");
         });
 
-        if (!voiceSignalsForMap?.length && voiceDeviation?.compared) {
+        if (!voiceSignalsForMap.length && voiceDeviation?.compared) {
           addNode({
             id: "voice_baseline_comparison",
             label: "Voice baseline comparison",
@@ -2709,8 +2846,9 @@ const hasSignalMapData =
             detail: `Voice comparison level: ${titleCase(
               voiceDeviation.deviationLevel
             )}.`,
-            fx: 105,
-            fy: -280,
+            category: "Voice signal",
+            fx: 110,
+            fy: -315,
           });
 
           addLink(
@@ -2722,97 +2860,104 @@ const hasSignalMapData =
         }
       }
 
-      if (hasPhysiologicContext) {
+      if (hasOtherSignalContext) {
         addNode({
-          id: "physiology_domain",
-          label: "Physiologic signal",
-          group: "physiology",
-          detail: `${signalEvidence.length} physiologic signal${
-            signalEvidence.length === 1 ? "" : "s"
-          } contributed to the current review window.`,
-          fx: 250,
-          fy: -95,
+          id: "other_signal_domain",
+          label: "Other signal input",
+          group: "other",
+          detail: `${otherSignalsForMap.length} additional signal${
+            otherSignalsForMap.length === 1 ? "" : "s"
+          } contributed to the current review context.`,
+          category: "Input",
+          fx: 300,
+          fy: 125,
         });
 
         addLink(
-          "physiology_domain",
-          "clinical_context",
-          "physiologic context",
-          "physiology"
+          "other_signal_domain",
+          "lineage_summary",
+          "additional context",
+          "other"
         );
 
-        signalEvidence.forEach((signal, index) => {
-          const id = `phys_${signal.signal || signal.id || index}`;
+        otherSignalsForMap.slice(0, 4).forEach((signal, index) => {
+          const id = `other_signal_${signal.signal || signal.id || index}`;
 
           addNode({
             id,
-            label: signal.label || signal.signal || "Physiologic signal",
-            group: "physiology_detail",
+            label: signal.label || signal.signal || "Additional signal",
+            group: "other_detail",
             detail: clinicianizeText(
               signal.explanation ||
                 signal.interpretation ||
-                `${signal.label || "Signal"} changed compared with baseline.`
+                "Additional signal context detected."
             ),
-            direction: signal.direction,
-            magnitude: signal.magnitude,
-            severity: signal.severity,
-            fx:
-              360 +
-              Math.cos((index / Math.max(signalEvidence.length, 1)) * Math.PI * 2) *
-                95,
-            fy:
-              -35 +
-              Math.sin((index / Math.max(signalEvidence.length, 1)) * Math.PI * 2) *
-                85,
+            category: "Additional signal",
+            fx: 430 + index * 42,
+            fy: 120 + index * 32,
           });
 
-          addLink(
-            id,
-            "physiology_domain",
-            signal.direction || "changed",
-            "physiology"
-          );
+          addLink(id, "other_signal_domain", "additional signal", "other");
         });
       }
 
-      if (concordantSignals.length > 0) {
-  addNode({
-    id: "concordant_signals",
-    label: "Concordant signals",
-    group: "fusion_detail",
-    detail:
-      "Patient-reported context and physiologic signal evidence appear aligned in the current review window.",
-    fx: 0,
-    fy: 165,
-  });
+      if (hasConcordantSignals) {
+        addNode({
+          id: "concordance_domain",
+          label: "Concordant signals",
+          group: "concordance",
+          detail:
+            "Patient-reported context and physiologic signal evidence appear aligned in the current review window.",
+          category: "Concordance",
+          fx: -90,
+          fy: 270,
+        });
 
-  addLink(
-    "concordant_signals",
-    "clinical_context",
-    "concordance",
-    "fusion"
-  );
+        addLink(
+          "concordance_domain",
+          "lineage_summary",
+          "supports review priority",
+          "concordance"
+        );
 
-  concordantSignals.forEach((item, index) => {
-    const id = `concordance_${item.id}`;
+        concordantSignals.forEach((item, index) => {
+          const id = `concordance_${item.id}`;
 
-    addNode({
-      id,
-      label: item.label,
-      group: "fusion_detail",
-      detail: clinicianizeText(item.explanation),
-      fx: -110 + index * 110,
-      fy: 250,
-    });
+          addNode({
+            id,
+            label: item.label,
+            group: "concordance_detail",
+            detail: clinicianizeText(item.explanation),
+            category: "Concordant signal pattern",
+            fx: -240 + index * 130,
+            fy: 360,
+          });
 
-    addLink(id, "concordant_signals", "aligned", "fusion");
+          addLink(id, "concordance_domain", "aligned pattern", "concordance");
 
-    item.matchedSignals.slice(0, 4).forEach((signal) => {
-      const signalId = `phys_${signal.signal || signal.id || signal.label}`;
-      addLink(signalId, id, "supports", "physiology");
-    });
-  });
-}
+          item.matchedSignals.slice(0, 4).forEach((signal) => {
+            addLink(signal.nodeId, id, "aligns with report", "concordance");
+          });
+        });
+      } else if (hasPatientReportedContext && hasPhysiologicContext) {
+        addNode({
+          id: "no_concordance",
+          label: "No concordant symptom-vital pattern",
+          group: "concordance_empty",
+          detail:
+            "Patient-reported context and physiologic signal changes are both present, but this review window does not show a clear concordant symptom-vital pattern using current alpha rules.",
+          category: "Concordance",
+          fx: -120,
+          fy: 270,
+        });
+
+        addLink(
+          "no_concordance",
+          "lineage_summary",
+          "not aligned",
+          "concordance_empty"
+        );
+      }
 
       const unavailableDomains = [
         !hasPatientReportedContext ? "patient-reported context" : null,
@@ -2822,18 +2967,27 @@ const hasSignalMapData =
 
       const graphWidth =
         typeof window !== "undefined"
-          ? Math.max(Math.min(window.innerWidth - 320, 1080), 760)
-          : 900;
+          ? Math.max(Math.min(window.innerWidth - 560, 860), 640)
+          : 760;
+
+      const selectedNodeForPanel = selectedSignalNode || {
+        label: reviewPriorityLabel,
+        category: "Recommendation output",
+        detail: clinicianizeText(reviewRationale),
+      };
 
       return (
         <>
           <div className="muted signal-map-intro">
-            This map shows available patient-reported context, physiologic signals,
-	    and concordant signal patterns from the current review window. Domains
-            without real data are not inferred.
+            This map explains why this patient was surfaced for review by
+            tracing available inputs to changed signals, concordance checks, and
+            review-priority output. Domains without real data are not inferred.
           </div>
 
           <div className="signal-map-legend">
+            <span className="signal-map-pill signal-map-pill-output">
+              Review output
+            </span>
             <span className="signal-map-pill signal-map-pill-patient">
               Patient-reported
             </span>
@@ -2843,116 +2997,207 @@ const hasSignalMapData =
             <span className="signal-map-pill signal-map-pill-physiology">
               Physiologic signal
             </span>
-            <span className="signal-map-pill signal-map-pill-fusion">
-              Fusion context
+            <span className="signal-map-pill signal-map-pill-concordance">
+              Concordance
             </span>
           </div>
 
-          <div className="signal-map-shell">
-            <ForceGraph2D
-              ref={graphRef}
-              graphData={{ nodes, links }}
-              width={graphWidth}
-              height={440}
-              cooldownTicks={0}
-              enableZoomInteraction={false}
-              enablePanInteraction={false}
-              enableNodeDrag={false}
-              nodeRelSize={8}
-              linkWidth={(link) =>
-                link.group === "fusion" ? 1.8 : 1.2
-              }
-              linkColor={(link) => {
-                if (link.group === "patient") return "rgba(251, 191, 36, 0.58)";
-                if (link.group === "voice") return "rgba(129, 140, 248, 0.58)";
-                if (link.group === "physiology") return "rgba(45, 212, 191, 0.58)";
-                if (link.group === "fusion") return "rgba(248, 250, 252, 0.64)";
-                return "rgba(148, 163, 184, 0.42)";
-              }}
-              linkDirectionalParticles={1}
-              linkDirectionalParticleWidth={1.4}
-              linkDirectionalArrowLength={4}
-              linkDirectionalArrowRelPos={1}
-              linkCurvature={0.08}
-              nodeLabel={(node) =>
-                `${node.label}\n\n${node.detail || "Available signal context."}`
-              }
-              nodeCanvasObject={(node, ctx, globalScale) => {
-                const label = node.label || "";
-                const fontSize = Math.max(10 / globalScale, 8);
-                const radius =
-                  node.group === "fusion"
-                    ? 20 / globalScale
-                    : node.group?.includes("detail")
-                      ? 10 / globalScale
-                      : 15 / globalScale;
+          <div className="signal-lineage-layout">
+            <div className="signal-map-shell signal-map-shell-lineage">
+              <ForceGraph2D
+                ref={graphRef}
+                graphData={{ nodes, links }}
+                width={graphWidth}
+                height={480}
+                cooldownTicks={0}
+                enableZoomInteraction={false}
+                enablePanInteraction={false}
+                enableNodeDrag={false}
+                nodeRelSize={8}
+                linkWidth={(link) => {
+                  if (link.group === "output") return 2.2;
+                  if (link.group === "concordance") return 1.9;
+                  return 1.25;
+                }}
+                linkColor={(link) => {
+                  if (link.group === "patient") return "rgba(251, 191, 36, 0.62)";
+                  if (link.group === "voice") return "rgba(129, 140, 248, 0.62)";
+                  if (link.group === "physiology") return "rgba(45, 212, 191, 0.62)";
+                  if (link.group === "concordance") return "rgba(34, 197, 94, 0.72)";
+                  if (link.group === "concordance_empty") return "rgba(148, 163, 184, 0.38)";
+                  if (link.group === "output") return "rgba(248, 250, 252, 0.74)";
+                  return "rgba(148, 163, 184, 0.42)";
+                }}
+                linkDirectionalParticles={(link) =>
+                  link.group === "output" || link.group === "concordance" ? 2 : 1
+                }
+                linkDirectionalParticleWidth={(link) =>
+                  link.group === "output" ? 1.8 : 1.2
+                }
+                linkDirectionalArrowLength={4}
+                linkDirectionalArrowRelPos={1}
+                linkCurvature={0.08}
+                nodeLabel={(node) =>
+                  `${node.label}\n\n${node.detail || "Available signal context."}`
+                }
+                onNodeClick={(node) => setSelectedSignalNode(node)}
+                nodeCanvasObject={(node, ctx, globalScale) => {
+                  const label = node.label || "";
+                  const fontSize = Math.max(10 / globalScale, 8);
+                  const radius =
+                    node.group === "output"
+                      ? 23 / globalScale
+                      : node.group === "output_detail"
+                        ? 18 / globalScale
+                        : node.group?.includes("detail")
+                          ? 10 / globalScale
+                          : 15 / globalScale;
 
-                const colorMap = {
-                  fusion: "#F8FAFC",
-                  fusion_detail: "#CBD5E1",
-                  patient: "#FBBF24",
-                  patient_detail: "#FDE68A",
-                  voice: "#818CF8",
-                  voice_detail: "#C4B5FD",
-                  physiology: "#2DD4BF",
-                  physiology_detail: "#99F6E4",
-                };
+                  const colorMap = {
+                    output: "#F8FAFC",
+                    output_detail: "#CBD5E1",
+                    patient: "#FBBF24",
+                    patient_detail: "#FDE68A",
+                    voice: "#818CF8",
+                    voice_detail: "#C4B5FD",
+                    physiology: "#2DD4BF",
+                    physiology_detail: "#99F6E4",
+                    concordance: "#22C55E",
+                    concordance_detail: "#86EFAC",
+                    concordance_empty: "#94A3B8",
+                    other: "#38BDF8",
+                    other_detail: "#BAE6FD",
+                  };
 
-                const nodeColor = colorMap[node.group] || "#CBD5E1";
-                const x = node.x || 0;
-                const y = node.y || 0;
+                  const nodeColor = colorMap[node.group] || "#CBD5E1";
+                  const x = node.x || 0;
+                  const y = node.y || 0;
 
-                ctx.save();
+                  ctx.save();
 
-                ctx.shadowColor = nodeColor;
-                ctx.shadowBlur = node.group === "fusion" ? 22 : 13;
+                  ctx.shadowColor = nodeColor;
+                  ctx.shadowBlur =
+                    node.group === "output"
+                      ? 24
+                      : node.group === "concordance"
+                        ? 18
+                        : 12;
 
-                ctx.beginPath();
-                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
-                ctx.fillStyle =
-                  node.group === "fusion"
-                    ? "rgba(15, 23, 42, 0.96)"
-                    : "rgba(15, 23, 42, 0.82)";
-                ctx.fill();
+                  ctx.beginPath();
+                  ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                  ctx.fillStyle =
+                    node.group === "output"
+                      ? "rgba(15, 23, 42, 0.98)"
+                      : "rgba(15, 23, 42, 0.84)";
+                  ctx.fill();
 
-                ctx.lineWidth = node.group === "fusion" ? 2.2 / globalScale : 1.2 / globalScale;
-                ctx.strokeStyle = nodeColor;
-                ctx.stroke();
+                  ctx.lineWidth =
+                    node.group === "output"
+                      ? 2.4 / globalScale
+                      : 1.2 / globalScale;
+                  ctx.strokeStyle = nodeColor;
+                  ctx.stroke();
 
-                ctx.shadowBlur = 0;
-                ctx.font = `700 ${fontSize}px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "top";
-                ctx.fillStyle = "#E5E7EB";
+                  ctx.shadowBlur = 0;
+                  ctx.font = `700 ${fontSize}px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                  ctx.textAlign = "center";
+                  ctx.textBaseline = "top";
+                  ctx.fillStyle = "#E5E7EB";
 
-                const maxLabelWidth = 145 / globalScale;
-                const words = label.split(" ");
-                const lines = [];
-                let line = "";
+                  const maxLabelWidth = 150 / globalScale;
+                  const words = label.split(" ");
+                  const lines = [];
+                  let line = "";
 
-                words.forEach((word) => {
-                  const test = line ? `${line} ${word}` : word;
-                  if (ctx.measureText(test).width > maxLabelWidth && line) {
-                    lines.push(line);
-                    line = word;
-                  } else {
-                    line = test;
-                  }
-                });
+                  words.forEach((word) => {
+                    const test = line ? `${line} ${word}` : word;
+                    if (ctx.measureText(test).width > maxLabelWidth && line) {
+                      lines.push(line);
+                      line = word;
+                    } else {
+                      line = test;
+                    }
+                  });
 
-                if (line) lines.push(line);
+                  if (line) lines.push(line);
 
-                lines.slice(0, 2).forEach((textLine, index) => {
-                  ctx.fillText(
-                    textLine,
-                    x,
-                    y + radius + 6 / globalScale + index * (fontSize + 2 / globalScale)
-                  );
-                });
+                  lines.slice(0, 2).forEach((textLine, index) => {
+                    ctx.fillText(
+                      textLine,
+                      x,
+                      y +
+                        radius +
+                        6 / globalScale +
+                        index * (fontSize + 2 / globalScale)
+                    );
+                  });
 
-                ctx.restore();
-              }}
-            />
+                  ctx.restore();
+                }}
+              />
+            </div>
+
+            <aside className="signal-lineage-panel">
+              <div className="signal-lineage-panel-kicker">
+                Explainability
+              </div>
+
+              <div className="signal-lineage-panel-title">
+                {selectedNodeForPanel.label}
+              </div>
+
+              <div className="signal-lineage-panel-category">
+                {selectedNodeForPanel.category || "Signal context"}
+              </div>
+
+              <div className="signal-lineage-panel-copy">
+                {selectedNodeForPanel.detail ||
+                  "Select a node to see how it contributes to the review recommendation."}
+              </div>
+
+              <div className="signal-lineage-panel-divider" />
+
+              <div className="signal-lineage-panel-section">
+                <strong>Review output</strong>
+                <span>{reviewPriorityLabel}</span>
+              </div>
+
+              <div className="signal-lineage-panel-section">
+                <strong>Contributing physiologic signals</strong>
+                {physiologicSignalsForMap.length ? (
+                  <ul>
+                    {physiologicSignalsForMap.slice(0, 5).map((signal) => (
+                      <li key={signal.signal || signal.id || signal.label}>
+                        {signal.label || signal.signal}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span>No physiologic signal changes available.</span>
+                )}
+              </div>
+
+              <div className="signal-lineage-panel-section">
+                <strong>Concordance</strong>
+                {hasConcordantSignals ? (
+                  <ul>
+                    {concordantSignals.map((item) => (
+                      <li key={item.id}>{item.label}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span>
+                    No clear symptom-vital concordance detected in this review window.
+                  </span>
+                )}
+              </div>
+
+              <div className="signal-lineage-panel-note">
+                Descriptive signal lineage only. This view explains available
+                inputs and relationships; it does not diagnose, predict, or
+                recommend treatment.
+              </div>
+            </aside>
           </div>
 
           {unavailableDomains.length > 0 && (
@@ -2973,7 +3218,6 @@ const hasSignalMapData =
 </section>
 </>
 )}
-
 {/* ── Temporal Signal Intelligence ───────────────────────────── */}
 <section className="detail-section">
   <div className="detail-section-title-row">

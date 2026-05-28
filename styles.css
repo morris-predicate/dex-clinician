@@ -1474,3 +1474,123 @@ body,
 .source-pill {
   text-transform: none;
 }
+
+/* ── Signal Lineage Map explainability layout ─────────────────────── */
+
+.signal-map-pill-output {
+  color: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.18);
+}
+
+.signal-map-pill-concordance {
+  color: #86efac;
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18);
+}
+
+.signal-lineage-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.signal-map-shell-lineage {
+  min-height: 480px;
+}
+
+.signal-lineage-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background:
+    radial-gradient(circle at top left, rgba(248, 250, 252, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.96));
+  padding: 16px;
+  color: #e5e7eb;
+  box-shadow:
+    inset 0 0 60px rgba(15, 23, 42, 0.7),
+    0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.signal-lineage-panel-kicker {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.signal-lineage-panel-title {
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+
+.signal-lineage-panel-category {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.signal-lineage-panel-copy {
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.signal-lineage-panel-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.18);
+  margin: 14px 0;
+}
+
+.signal-lineage-panel-section {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.signal-lineage-panel-section strong {
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.signal-lineage-panel-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.signal-lineage-panel-section li {
+  margin-bottom: 4px;
+}
+
+.signal-lineage-panel-note {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1050px) {
+  .signal-lineage-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-lineage-panel {
+    min-height: auto;
+  }
+}
