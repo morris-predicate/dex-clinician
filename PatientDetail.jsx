@@ -3004,14 +3004,35 @@ fy:
 
           <div className="signal-lineage-layout">
             <div className="signal-map-shell signal-map-shell-lineage">
-              <ForceGraph2D
+  <div className="signal-map-controls">
+    <button
+      type="button"
+      onClick={() => {
+        graphRef.current?.centerAt(30, 36, 450);
+        graphRef.current?.zoom(0.82, 450);
+      }}
+    >
+      Reset view
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        graphRef.current?.zoomToFit?.(450, 70);
+      }}
+    >
+      Fit map
+    </button>
+  </div>
+
+  <ForceGraph2D
                 ref={graphRef}
                 graphData={{ nodes, links }}
                 width={graphWidth}
                 height={480}
                 cooldownTicks={0}
-                enableZoomInteraction={false}
-                enablePanInteraction={false}
+                enableZoomInteraction={true}
+                enablePanInteraction={true}
                 enableNodeDrag={false}
                 nodeRelSize={8}
                 linkWidth={(link) => {
@@ -3040,7 +3061,14 @@ fy:
                 nodeLabel={(node) =>
                   `${node.label}\n\n${node.detail || "Available signal context."}`
                 }
-                onNodeClick={(node) => setSelectedSignalNode(node)}
+                onNodeClick={(node) => {
+  setSelectedSignalNode(node);
+
+  if (graphRef.current && Number.isFinite(node?.x) && Number.isFinite(node?.y)) {
+    graphRef.current.centerAt(node.x, node.y, 450);
+    graphRef.current.zoom(1.15, 450);
+  }
+}}
                 nodeCanvasObject={(node, ctx, globalScale) => {
                   const label = node.label || "";
                   const fontSize = Math.max(10 / globalScale, 8);
