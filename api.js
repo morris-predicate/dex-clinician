@@ -4,14 +4,78 @@
  */
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "";
+const DEFAULT_CLINICIAN_ID = "unknown_clinician";
+const DEFAULT_CLINICIAN_ROLE = "clinician";
+const DEFAULT_PRACTICE_ID = "unknown_practice";
 
-async function request(path, { clinicianKey, clinicId, method = "GET" } = {}) {
+function resolveClinicianActorIdentity({
+  clinicianId,
+  clinicianRole,
+  practiceId,
+  clinicId,
+} = {}) {
+  return {
+    clinicianId:
+      clinicianId ||
+      import.meta.env.VITE_CLINICIAN_ID ||
+      DEFAULT_CLINICIAN_ID,
+    clinicianRole:
+      clinicianRole ||
+      import.meta.env.VITE_CLINICIAN_ROLE ||
+      DEFAULT_CLINICIAN_ROLE,
+    practiceId:
+      practiceId ||
+      import.meta.env.VITE_PRACTICE_ID ||
+      clinicId ||
+      DEFAULT_PRACTICE_ID,
+  };
+}
+
+export function buildClinicianHeaders({
+  clinicianKey,
+  clinicianId,
+  clinicianRole,
+  practiceId,
+  clinicId,
+} = {}) {
+  const actor = resolveClinicianActorIdentity({
+    clinicianId,
+    clinicianRole,
+    practiceId,
+    clinicId,
+  });
+
+  return {
+    "x-clinician-key": clinicianKey || "",
+    "x-clinician-id": actor.clinicianId,
+    "x-clinician-role": actor.clinicianRole,
+    "x-practice-id": actor.practiceId,
+  };
+}
+
+async function request(
+  path,
+  {
+    clinicianKey,
+    clinicianId,
+    clinicianRole,
+    practiceId,
+    clinicId,
+    method = "GET",
+  } = {}
+) {
   const url = new URL(`${PROXY_URL}${path}`);
   if (clinicId) url.searchParams.set("clinicId", clinicId);
 
   const res = await fetch(url.toString(), {
     method,
-    headers: { "x-clinician-key": clinicianKey || "" },
+    headers: buildClinicianHeaders({
+      clinicianKey,
+      clinicianId,
+      clinicianRole,
+      practiceId,
+      clinicId,
+    }),
   });
 
   if (res.status === 401) {
