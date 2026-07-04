@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
+import PilotGoNoGoPanel from "./components/PilotGoNoGoPanel.jsx";
 import PilotReadyV1ReadinessPanel from "./components/PilotReadyV1ReadinessPanel.jsx";
 import {
   fetchCareTeamUpdates,
@@ -170,6 +171,11 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
       />
 
       <PilotReadyV1ReadinessPanel
+        clinicianKey={clinicianKey}
+        clinicId={clinicId}
+      />
+
+      <PilotGoNoGoPanel
         clinicianKey={clinicianKey}
         clinicId={clinicId}
       />

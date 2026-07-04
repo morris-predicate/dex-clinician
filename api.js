@@ -64,6 +64,9 @@ export const fetchOpenDxReasoningLedgers = ({ patientId, sessionId, ...opts }) =
 export const fetchPilotReadyV1Readiness = (opts) =>
   request("/api/pilot-ready-v1/readiness", opts);
 
+export const fetchPilotGoNoGoChecklist = (opts) =>
+  request("/api/pilot-ready-v1/go-no-go", opts);
+
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [
     patientId
