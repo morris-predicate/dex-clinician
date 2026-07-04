@@ -397,6 +397,48 @@ table { border-collapse: collapse; width: 100%; }
   gap: 6px;
 }
 
+.opendx-ledger-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 16px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.opendx-ledger-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.opendx-ledger-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.opendx-ledger-section-title {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.opendx-ledger-section ul {
+  display: grid;
+  gap: 7px;
+  padding-left: 18px;
+}
+
+.opendx-ledger-section li {
+  color: #0f172a;
+  line-height: 1.45;
+}
+
 /* ── Entity tags (mirrors PWA done-screen styles) ───────────────────────── */
 .entity-tag {
   display: inline-block;
@@ -509,6 +551,10 @@ table { border-collapse: collapse; width: 100%; }
     text-align: left;
     white-space: normal;
   }
+
+  .opendx-ledger-grid {
+    grid-template-columns: 1fr;
+  }
 }
 /* ── Clinician Dark Mode Override ─────────────────────────────────────── */
 
@@ -528,6 +574,7 @@ body,
 .patient-row,
 .care-team-updates-card,
 .care-team-update,
+.opendx-ledger-section,
 .detail-header-card,
 .detail-card,
 .empty-state,
@@ -557,6 +604,7 @@ body,
 .detail-name,
 .care-team-update-patient,
 .care-team-update-body p,
+.opendx-ledger-section li,
 .patient-row-name,
 .patient-row-session-time,
 .transcript-content,
@@ -570,6 +618,8 @@ body,
 .care-team-update-meta,
 .care-team-update-status,
 .care-team-update-label,
+.opendx-ledger-meta,
+.opendx-ledger-section-title,
 .patient-row-meta,
 .detail-meta,
 .detail-status,

@@ -9,6 +9,7 @@ import React, {
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import ForceGraph2D from "react-force-graph-2d";
+import OpenDxExplainabilityPanel from "./components/OpenDxExplainabilityPanel.jsx";
 import {
   fetchPatient,
   fetchTranscript,
@@ -3856,6 +3857,12 @@ lines.slice(0, 3).forEach((textLine, index) => {
 </section>
 
       
+      <OpenDxExplainabilityPanel
+        patientId={patient.patientId || patient.id || patientId}
+        sessionId={patient.latestSessionId}
+        clinicianKey={clinicianKey}
+        clinicId={clinicId}
+      />
 
       {/* ── Transcript toggle ─────────────────────────────────────────────── */}
       <section className="detail-section">

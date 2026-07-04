@@ -48,6 +48,19 @@ export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
     method: "POST",
   });
 
+export const fetchOpenDxReasoningLedgers = ({ patientId, sessionId, ...opts }) => {
+  const params = new URLSearchParams();
+  if (patientId) params.set("patientId", patientId);
+  if (sessionId) params.set("sessionId", sessionId);
+
+  const query = params.toString();
+  const path = query
+    ? `/api/opendx/reasoning-ledgers?${query}`
+    : "/api/opendx/reasoning-ledgers";
+
+  return request(path, opts);
+};
+
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [
     patientId
