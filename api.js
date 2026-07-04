@@ -86,6 +86,27 @@ export const fetchChatSessionEvents = ({
   return request(path, opts);
 };
 
+export const fetchOpenDxInteractionTrace = ({
+  patientId,
+  subjectUid,
+  sessionId,
+  interactionId,
+  ...opts
+}) => {
+  const params = new URLSearchParams();
+  if (patientId) params.set("patientId", patientId);
+  if (subjectUid) params.set("subjectUid", subjectUid);
+  if (sessionId) params.set("sessionId", sessionId);
+  if (interactionId) params.set("interactionId", interactionId);
+
+  const query = params.toString();
+  const path = query
+    ? `/api/opendx/interaction-trace?${query}`
+    : "/api/opendx/interaction-trace";
+
+  return request(path, opts);
+};
+
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [
     patientId

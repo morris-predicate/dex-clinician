@@ -1,12 +1,13 @@
 import React from "react";
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AskMiloSessionEventsPanel from "./AskMiloSessionEventsPanel.jsx";
-import { fetchChatSessionEvents } from "../api.js";
+import { fetchChatSessionEvents, fetchOpenDxInteractionTrace } from "../api.js";
 
 vi.mock("../api.js", () => ({
   fetchChatSessionEvents: vi.fn(),
+  fetchOpenDxInteractionTrace: vi.fn(),
 }));
 
 afterEach(() => {
@@ -15,6 +16,10 @@ afterEach(() => {
 });
 
 describe("AskMiloSessionEventsPanel", () => {
+  beforeEach(() => {
+    fetchOpenDxInteractionTrace.mockResolvedValue(null);
+  });
+
   it("renders empty state", async () => {
     fetchChatSessionEvents.mockResolvedValue({ events: [] });
 
@@ -116,6 +121,42 @@ describe("AskMiloSessionEventsPanel", () => {
     expect(await screen.findByText("Interaction interaction-123")).toBeInTheDocument();
     expect(screen.getByText("Reasoning ledger ledger-456")).toBeInTheDocument();
     expect(screen.getByText("Care-team update update-789")).toBeInTheDocument();
+  });
+
+  it("shows interaction trace details when interactionId is present", async () => {
+    fetchChatSessionEvents.mockResolvedValue({
+      events: [
+        {
+          id: "event-1",
+          role: "assistant",
+          content: "MILO prepared traceable dashboard context.",
+          timestamp: "2026-07-04T13:02:00.000Z",
+          interactionId: "interaction-123",
+        },
+      ],
+    });
+    fetchOpenDxInteractionTrace.mockResolvedValue({
+      trace: {
+        interactionId: "interaction-123",
+        traceComplete: true,
+        chatEventCount: 1,
+        reasoningLedgerPresent: true,
+        longitudinalObservationCount: 2,
+        careTeamUpdatePresent: false,
+      },
+    });
+
+    render(<AskMiloSessionEventsPanel patientId="patient-123" sessionId="session-789" />);
+
+    expect(await screen.findByText("OpenDx interaction trace")).toBeInTheDocument();
+    expect(screen.getAllByText("Interaction interaction-123")).toHaveLength(2);
+    expect(fetchOpenDxInteractionTrace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        patientId: "patient-123",
+        sessionId: "session-789",
+        interactionId: "interaction-123",
+      })
+    );
   });
 
   it("does not render diagnosis or treatment copy", async () => {

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchChatSessionEvents } from "../api.js";
+import OpenDxInteractionTracePanel from "./OpenDxInteractionTracePanel.jsx";
 
 const DISPLAY_ROLES = new Set(["user", "patient", "assistant", "milo"]);
 
@@ -99,6 +100,17 @@ export default function AskMiloSessionEventsPanel({
                     <span>Care-team update {event.careTeamUpdateId}</span>
                   )}
                 </div>
+
+                {event.interactionId && (
+                  <OpenDxInteractionTracePanel
+                    patientId={patientId}
+                    subjectUid={subjectUid}
+                    sessionId={sessionId}
+                    interactionId={event.interactionId}
+                    clinicianKey={clinicianKey}
+                    clinicId={clinicId}
+                  />
+                )}
               </article>
             ))}
           </div>
