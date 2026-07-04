@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "vitest --environment jsdom",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -17,7 +18,11 @@
     "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.0"
+    "jsdom": "^29.1.1",
+    "vite": "^5.4.0",
+    "vitest": "^4.1.9"
   }
 }

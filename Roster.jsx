@@ -1,6 +1,6 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
-import { fetchRoster } from "./api.js";
+import { fetchCareTeamUpdates, fetchRoster } from "./api.js";
 
 const REFRESH_MS = 60_000;
 
@@ -10,18 +10,40 @@ export default function Roster({ clinicId, clinicianKey, onSelectPatient, onLogo
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [search, setSearch] = useState("");
+  const [careTeamUpdates, setCareTeamUpdates] = useState([]);
+  const [careTeamUpdatesLoading, setCareTeamUpdatesLoading] = useState(true);
+  const [careTeamUpdatesError, setCareTeamUpdatesError] = useState(null);
 
   const load = useCallback(async () => {
     try {
-      const { patients } = await fetchRoster({ clinicianKey, clinicId });
+      const [rosterResult, careTeamUpdatesResult] = await Promise.allSettled([
+        fetchRoster({ clinicianKey, clinicId }),
+        fetchCareTeamUpdates({ clinicianKey, clinicId }),
+      ]);
+
+      if (rosterResult.status === "rejected") {
+        throw rosterResult.reason;
+      }
+
+      const { patients } = rosterResult.value;
       setPatients(patients);
       setError(null);
+
+      if (careTeamUpdatesResult.status === "fulfilled") {
+        setCareTeamUpdates(normalizeCareTeamUpdates(careTeamUpdatesResult.value));
+        setCareTeamUpdatesError(null);
+      } else {
+        setCareTeamUpdates([]);
+        setCareTeamUpdatesError("Ask MILO care-team updates are unavailable right now.");
+      }
+
       setLastUpdated(new Date());
     } catch (err) {
       if (err.status === 401) onLogout();
       else setError(err.message);
     } finally {
       setLoading(false);
+      setCareTeamUpdatesLoading(false);
     }
   }, [clinicianKey, clinicId, onLogout]);
 
@@ -108,6 +130,12 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
         <div className="banner-error">{error}</div>
       )}
 
+      <CareTeamUpdatesSection
+        updates={careTeamUpdates}
+        loading={careTeamUpdatesLoading}
+        error={careTeamUpdatesError}
+      />
+
       {filtered.length === 0 ? (
         <div className="empty-state">
           {search ? "No patients match your search." : "No patients enrolled in this clinic yet."}
@@ -125,6 +153,115 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
       )}
     </div>
   );
+}
+
+export function CareTeamUpdatesSection({ updates, loading = false, error = null }) {
+  return (
+    <section className="care-team-updates-section" aria-labelledby="care-team-updates-title">
+      <div className="detail-section-title" id="care-team-updates-title">
+        Ask MILO Care Team Updates
+      </div>
+
+      <div className="care-team-updates-card">
+        {loading ? (
+          <div className="empty-state-small">Loading Ask MILO care-team updates…</div>
+        ) : error ? (
+          <div className="empty-state-small">{error}</div>
+        ) : updates.length === 0 ? (
+          <div className="empty-state-small">
+            No Ask MILO care-team updates are ready for review yet.
+          </div>
+        ) : (
+          <div className="care-team-updates-list">
+            {updates.map((update) => (
+              <article className="care-team-update" key={update.id}>
+                <div className="care-team-update-header">
+                  <div>
+                    <div className="care-team-update-patient">
+                      Patient {update.patientId || "Unknown"}
+                    </div>
+                    <div className="care-team-update-meta">
+                      {update.subjectUid && <>Subject {update.subjectUid}</>}
+                      {update.sessionId && (
+                        <>
+                          {update.subjectUid && " · "}
+                          Session {update.sessionId}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="care-team-update-status">
+                    <span>{update.status || "Ready for review"}</span>
+                    <span>{formatCareTeamTimestamp(update.timestamp)}</span>
+                  </div>
+                </div>
+
+                <div className="care-team-update-body">
+                  <div>
+                    <div className="care-team-update-label">Trigger message</div>
+                    <p>{update.triggerMessage || "No trigger message provided."}</p>
+                  </div>
+
+                  <div>
+                    <div className="care-team-update-label">Clinician-ready summary draft</div>
+                    <p>{update.summaryDraft || "No summary draft provided."}</p>
+                  </div>
+                </div>
+
+                <div className="care-team-update-delivery">
+                  <span>Not sent outside MILO</span>
+                  <span>Prepared for clinician dashboard review</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function normalizeCareTeamUpdates(data) {
+  const updates = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.updates)
+    ? data.updates
+    : Array.isArray(data?.careTeamUpdates)
+    ? data.careTeamUpdates
+    : Array.isArray(data?.items)
+    ? data.items
+    : [];
+
+  return updates.map((update, index) => ({
+    id:
+      update.id ||
+      update.updateId ||
+      update.careTeamUpdateId ||
+      `${update.patientId || update.subjectUid || "care-team-update"}-${update.sessionId || index}`,
+    patientId: update.patientId || update.patient_id || update.profileId,
+    subjectUid: update.subjectUid || update.subject_uid || update.subjectId,
+    sessionId: update.sessionId || update.session_id || update.latestSessionId,
+    triggerMessage:
+      update.triggerMessage ||
+      update.trigger_message ||
+      update.message ||
+      update.trigger?.message ||
+      update.trigger?.text,
+    summaryDraft:
+      update.summaryDraft ||
+      update.clinicianSummaryDraft ||
+      update.clinicianReadySummaryDraft ||
+      update.summary ||
+      update.draft,
+    timestamp:
+      update.timestamp ||
+      update.createdAt ||
+      update.updatedAt ||
+      update.preparedAt ||
+      update.latestSessionAt,
+    status: update.status || update.reviewStatus || update.state,
+  }));
 }
 
 function getAbnormalSignals(patient) {
@@ -695,4 +832,18 @@ function formatRelativeDate(iso) {
   const diffD = Math.floor(diffH / 24);
   if (diffD < 7) return `${diffD}d ago`;
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function formatCareTeamTimestamp(value) {
+  if (!value) return "Timestamp unavailable";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+
+  return d.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }

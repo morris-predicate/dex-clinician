@@ -38,6 +38,9 @@ export const fetchTranscript = ({ patientId, ...opts }) =>
 export const fetchPatientBaseline = ({ patientId, ...opts }) =>
   request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, opts);
 
+export const fetchCareTeamUpdates = (opts) =>
+  request("/api/clinician/care-team-updates", opts);
+
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [
     patientId

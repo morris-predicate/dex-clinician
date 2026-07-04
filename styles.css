@@ -166,6 +166,97 @@ table { border-collapse: collapse; width: 100%; }
   border-radius: 10px;
   overflow: hidden;
 }
+
+.care-team-updates-section {
+  margin-bottom: 20px;
+}
+
+.care-team-updates-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.care-team-updates-list {
+  display: grid;
+  gap: 12px;
+}
+
+.care-team-update {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.care-team-update-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.care-team-update-patient {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.care-team-update-meta,
+.care-team-update-status {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.care-team-update-status {
+  display: grid;
+  gap: 3px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.care-team-update-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+  padding: 14px 0;
+}
+
+.care-team-update-body p {
+  color: #0f172a;
+  line-height: 1.55;
+}
+
+.care-team-update-label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.care-team-update-delivery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.care-team-update-delivery span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #ecfeff;
+  border: 1px solid #bae6fd;
+  color: #155e75;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .patient-row {
   display: grid;
   grid-template-columns: 1fr auto 16px;
@@ -390,6 +481,20 @@ table { border-collapse: collapse; width: 100%; }
   .detail-header-card {
     padding: 16px;
   }
+
+  .care-team-update-header,
+  .care-team-update-body {
+    grid-template-columns: 1fr;
+  }
+
+  .care-team-update-header {
+    display: grid;
+  }
+
+  .care-team-update-status {
+    text-align: left;
+    white-space: normal;
+  }
 }
 /* ── Clinician Dark Mode Override ─────────────────────────────────────── */
 
@@ -407,6 +512,8 @@ body,
 .login-card,
 .patient-list,
 .patient-row,
+.care-team-updates-card,
+.care-team-update,
 .detail-header-card,
 .detail-card,
 .empty-state,
@@ -420,7 +527,12 @@ body,
   background: var(--surface-elevated) !important;
 }
 
+.care-team-update {
+  background: var(--surface-elevated) !important;
+}
+
 .page-header,
+.care-team-update-header,
 .vitals-table th,
 .transcript-meta {
   border-color: var(--border) !important;
@@ -428,6 +540,8 @@ body,
 
 .page-title,
 .detail-name,
+.care-team-update-patient,
+.care-team-update-body p,
 .patient-row-name,
 .patient-row-session-time,
 .transcript-content,
@@ -438,6 +552,9 @@ body,
 }
 
 .page-sub,
+.care-team-update-meta,
+.care-team-update-status,
+.care-team-update-label,
 .patient-row-meta,
 .detail-meta,
 .detail-status,
