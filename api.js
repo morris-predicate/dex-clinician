@@ -5,11 +5,12 @@
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "";
 
-async function request(path, { clinicianKey, clinicId } = {}) {
+async function request(path, { clinicianKey, clinicId, method = "GET" } = {}) {
   const url = new URL(`${PROXY_URL}${path}`);
   if (clinicId) url.searchParams.set("clinicId", clinicId);
 
   const res = await fetch(url.toString(), {
+    method,
     headers: { "x-clinician-key": clinicianKey || "" },
   });
 
@@ -40,6 +41,12 @@ export const fetchPatientBaseline = ({ patientId, ...opts }) =>
 
 export const fetchCareTeamUpdates = (opts) =>
   request("/api/clinician/care-team-updates", opts);
+
+export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
+  request(`/api/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
+    ...opts,
+    method: "POST",
+  });
 
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [

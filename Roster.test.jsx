@@ -1,8 +1,12 @@
 import React from "react";
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CareTeamUpdatesSection } from "./Roster.jsx";
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("CareTeamUpdatesSection", () => {
   it("renders empty state", () => {
@@ -59,7 +63,7 @@ describe("CareTeamUpdatesSection", () => {
             triggerMessage: "Please review elevated symptom concern.",
             summaryDraft: "Draft for clinician review.",
             timestamp: "2026-07-03T14:30:00.000Z",
-            status: "Ready for review",
+            status: "dashboard_ready",
           },
         ]}
       />
@@ -74,5 +78,94 @@ describe("CareTeamUpdatesSection", () => {
     expect(container).not.toHaveTextContent(/\bemail\b/i);
     expect(container).not.toHaveTextContent(/\bportal\b/i);
     expect(container).not.toHaveTextContent(/\bdelivered\b/i);
+    expect(container).not.toHaveTextContent(/provider recommendation/i);
+    expect(container).not.toHaveTextContent(/\brecommendation\b/i);
+  });
+
+  it("button appears for dashboard_ready", () => {
+    render(
+      <CareTeamUpdatesSection
+        updates={[
+          {
+            id: "update-1",
+            patientId: "patient-123",
+            triggerMessage: "Please review elevated symptom concern.",
+            summaryDraft: "Draft for clinician review.",
+            status: "dashboard_ready",
+          },
+        ]}
+        onMarkReviewed={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeInTheDocument();
+  });
+
+  it("button does not appear for reviewed_in_dashboard", () => {
+    render(
+      <CareTeamUpdatesSection
+        updates={[
+          {
+            id: "update-1",
+            patientId: "patient-123",
+            triggerMessage: "Please review elevated symptom concern.",
+            summaryDraft: "Draft for clinician review.",
+            status: "reviewed_in_dashboard",
+            reviewedAt: "2026-07-04T13:00:00.000Z",
+          },
+        ]}
+        onMarkReviewed={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
+    expect(screen.getByText("Reviewed in dashboard")).toBeInTheDocument();
+  });
+
+  it("successful review updates UI", async () => {
+    function ReviewHarness() {
+      const [updates, setUpdates] = React.useState([
+        {
+          id: "update-1",
+          patientId: "patient-123",
+          triggerMessage: "Please review elevated symptom concern.",
+          summaryDraft: "Draft for clinician review.",
+          status: "dashboard_ready",
+          timestamp: "2026-07-04T12:00:00.000Z",
+        },
+      ]);
+
+      async function handleMarkReviewed(updateId) {
+        setUpdates((current) =>
+          current.map((update) =>
+            update.id === updateId
+              ? {
+                  ...update,
+                  status: "reviewed_in_dashboard",
+                  reviewedAt: "2026-07-04T13:00:00.000Z",
+                }
+              : update
+          )
+        );
+      }
+
+      return (
+        <CareTeamUpdatesSection
+          updates={updates}
+          onMarkReviewed={handleMarkReviewed}
+        />
+      );
+    }
+
+    render(<ReviewHarness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark reviewed" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Reviewed in dashboard")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Jul 4/)).toBeInTheDocument();
   });
 });

@@ -1,6 +1,10 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
-import { fetchCareTeamUpdates, fetchRoster } from "./api.js";
+import {
+  fetchCareTeamUpdates,
+  fetchRoster,
+  markCareTeamUpdateReviewed,
+} from "./api.js";
 
 const REFRESH_MS = 60_000;
 
@@ -52,6 +56,33 @@ export default function Roster({ clinicId, clinicianKey, onSelectPatient, onLogo
     const interval = setInterval(load, REFRESH_MS);
     return () => clearInterval(interval);
   }, [load]);
+
+  const handleMarkCareTeamUpdateReviewed = useCallback(
+    async (updateId) => {
+      const data = await markCareTeamUpdateReviewed({
+        id: updateId,
+        clinicianKey,
+        clinicId,
+      });
+      const [reviewedUpdate] = normalizeCareTeamUpdates(data);
+
+      setCareTeamUpdates((current) =>
+        current.map((update) =>
+          update.id === updateId
+            ? {
+                ...update,
+                ...reviewedUpdate,
+                id: reviewedUpdate?.id || update.id,
+                status: reviewedUpdate?.status || "reviewed_in_dashboard",
+              }
+            : update
+        )
+      );
+
+      return reviewedUpdate;
+    },
+    [clinicianKey, clinicId]
+  );
 
   const normalizedSearch = search.toLowerCase().trim();
 
@@ -134,6 +165,7 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
         updates={careTeamUpdates}
         loading={careTeamUpdatesLoading}
         error={careTeamUpdatesError}
+        onMarkReviewed={handleMarkCareTeamUpdateReviewed}
       />
 
       {filtered.length === 0 ? (
@@ -155,7 +187,33 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
   );
 }
 
-export function CareTeamUpdatesSection({ updates, loading = false, error = null }) {
+export function CareTeamUpdatesSection({
+  updates,
+  loading = false,
+  error = null,
+  onMarkReviewed,
+}) {
+  const [reviewingIds, setReviewingIds] = useState([]);
+  const [reviewErrors, setReviewErrors] = useState({});
+
+  async function handleMarkReviewed(updateId) {
+    if (!onMarkReviewed) return;
+
+    setReviewingIds((ids) => [...ids, updateId]);
+    setReviewErrors(({ [updateId]: _removed, ...rest }) => rest);
+
+    try {
+      await onMarkReviewed(updateId);
+    } catch (err) {
+      setReviewErrors((current) => ({
+        ...current,
+        [updateId]: err.message || "Could not mark this update reviewed.",
+      }));
+    } finally {
+      setReviewingIds((ids) => ids.filter((id) => id !== updateId));
+    }
+  }
+
   return (
     <section className="care-team-updates-section" aria-labelledby="care-team-updates-title">
       <div className="detail-section-title" id="care-team-updates-title">
@@ -192,8 +250,8 @@ export function CareTeamUpdatesSection({ updates, loading = false, error = null 
                   </div>
 
                   <div className="care-team-update-status">
-                    <span>{update.status || "Ready for review"}</span>
-                    <span>{formatCareTeamTimestamp(update.timestamp)}</span>
+                    <span>{formatCareTeamStatus(update.status)}</span>
+                    <span>{formatCareTeamTimestamp(getCareTeamStatusTime(update))}</span>
                   </div>
                 </div>
 
@@ -213,6 +271,22 @@ export function CareTeamUpdatesSection({ updates, loading = false, error = null 
                   <span>Not sent outside MILO</span>
                   <span>Prepared for clinician dashboard review</span>
                 </div>
+
+                {update.status === "dashboard_ready" && onMarkReviewed && (
+                  <div className="care-team-update-actions">
+                    <button
+                      className="btn-secondary-small"
+                      type="button"
+                      onClick={() => handleMarkReviewed(update.id)}
+                      disabled={reviewingIds.includes(update.id)}
+                    >
+                      {reviewingIds.includes(update.id) ? "Marking reviewed…" : "Mark reviewed"}
+                    </button>
+                    {reviewErrors[update.id] && (
+                      <span className="care-team-update-error">{reviewErrors[update.id]}</span>
+                    )}
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -231,6 +305,12 @@ function normalizeCareTeamUpdates(data) {
     ? data.careTeamUpdates
     : Array.isArray(data?.items)
     ? data.items
+    : data?.update
+    ? [data.update]
+    : data?.careTeamUpdate
+    ? [data.careTeamUpdate]
+    : data?.id || data?.updateId || data?.careTeamUpdateId
+    ? [data]
     : [];
 
   return updates.map((update, index) => ({
@@ -260,6 +340,7 @@ function normalizeCareTeamUpdates(data) {
       update.updatedAt ||
       update.preparedAt ||
       update.latestSessionAt,
+    reviewedAt: update.reviewedAt || update.reviewed_at,
     status: update.status || update.reviewStatus || update.state,
   }));
 }
@@ -846,4 +927,21 @@ function formatCareTeamTimestamp(value) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatCareTeamStatus(status) {
+  const labels = {
+    dashboard_ready: "Prepared for clinician dashboard review",
+    reviewed_in_dashboard: "Reviewed in dashboard",
+  };
+
+  return labels[status] || status || "Ready for review";
+}
+
+function getCareTeamStatusTime(update) {
+  if (update.status === "reviewed_in_dashboard") {
+    return update.reviewedAt || update.timestamp;
+  }
+
+  return update.timestamp;
 }
