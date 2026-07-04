@@ -687,6 +687,55 @@ table { border-collapse: collapse; width: 100%; }
   line-height: 1.45;
 }
 
+.ask-milo-events-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ask-milo-event {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.ask-milo-event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ask-milo-event-content {
+  color: #0f172a;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ask-milo-event-references {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ask-milo-event-references span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 /* ── Entity tags (mirrors PWA done-screen styles) ───────────────────────── */
 .entity-tag {
   display: inline-block;
@@ -847,6 +896,7 @@ body,
 .pilot-go-no-go-category,
 .pilot-go-no-go-item-group,
 .pilot-go-no-go-notes,
+.ask-milo-event,
 .opendx-ledger-section,
 .detail-header-card,
 .detail-card,
@@ -884,6 +934,7 @@ body,
 .pilot-go-no-go-category span,
 .pilot-go-no-go-item-group li span,
 .pilot-go-no-go-notes li,
+.ask-milo-event-content,
 .opendx-ledger-section li,
 .patient-row-name,
 .patient-row-session-time,
@@ -906,6 +957,7 @@ body,
 .pilot-go-no-go-category strong,
 .pilot-go-no-go-item-group li strong,
 .pilot-go-no-go-subtitle,
+.ask-milo-event-header,
 .opendx-ledger-meta,
 .opendx-ledger-section-title,
 .patient-row-meta,

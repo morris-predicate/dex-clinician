@@ -9,6 +9,7 @@ import React, {
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import ForceGraph2D from "react-force-graph-2d";
+import AskMiloSessionEventsPanel from "./components/AskMiloSessionEventsPanel.jsx";
 import OpenDxExplainabilityPanel from "./components/OpenDxExplainabilityPanel.jsx";
 import {
   fetchPatient,
@@ -3858,6 +3859,14 @@ lines.slice(0, 3).forEach((textLine, index) => {
       
       <OpenDxExplainabilityPanel
         patientId={patient.patientId || patient.id || patientId}
+        sessionId={patient.latestSessionId}
+        clinicianKey={clinicianKey}
+        clinicId={clinicId}
+      />
+
+      <AskMiloSessionEventsPanel
+        patientId={patient.patientId || patient.id || patientId}
+        subjectUid={patient.subjectUid}
         sessionId={patient.latestSessionId}
         clinicianKey={clinicianKey}
         clinicId={clinicId}

@@ -67,6 +67,25 @@ export const fetchPilotReadyV1Readiness = (opts) =>
 export const fetchPilotGoNoGoChecklist = (opts) =>
   request("/api/pilot-ready-v1/go-no-go", opts);
 
+export const fetchChatSessionEvents = ({
+  patientId,
+  subjectUid,
+  sessionId,
+  ...opts
+}) => {
+  const params = new URLSearchParams();
+  if (patientId) params.set("patientId", patientId);
+  if (subjectUid) params.set("subjectUid", subjectUid);
+  if (sessionId) params.set("sessionId", sessionId);
+
+  const query = params.toString();
+  const path = query
+    ? `/api/chat/session-events?${query}`
+    : "/api/chat/session-events";
+
+  return request(path, opts);
+};
+
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [
     patientId
