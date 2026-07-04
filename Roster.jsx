@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
+import PilotReadyV1ReadinessPanel from "./components/PilotReadyV1ReadinessPanel.jsx";
 import {
   fetchCareTeamUpdates,
   fetchRoster,
@@ -166,6 +167,11 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
         loading={careTeamUpdatesLoading}
         error={careTeamUpdatesError}
         onMarkReviewed={handleMarkCareTeamUpdateReviewed}
+      />
+
+      <PilotReadyV1ReadinessPanel
+        clinicianKey={clinicianKey}
+        clinicId={clinicId}
       />
 
       {filtered.length === 0 ? (
