@@ -644,7 +644,6 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
     spo2: "spo2",
     sp_o2: "spo2",
     SpO2: "spo2",
-    "SpO2": "spo2",
     "SpO₂": "spo2",
     oxygen_saturation: "spo2",
     "oxygen saturation": "spo2",
