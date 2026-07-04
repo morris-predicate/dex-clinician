@@ -160,6 +160,9 @@ export const fetchPilotReadyV1Readiness = (opts) =>
 export const fetchPilotGoNoGoChecklist = (opts) =>
   request("/api/pilot-ready-v1/go-no-go", opts);
 
+export const fetchPilotEnvironmentValidation = (opts) =>
+  request("/api/pilot-ready-v1/environment", opts);
+
 export const fetchChatSessionEvents = ({
   patientId,
   subjectUid,

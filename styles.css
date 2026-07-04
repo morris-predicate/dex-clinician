@@ -519,6 +519,92 @@ table { border-collapse: collapse; width: 100%; }
   line-height: 1.45;
 }
 
+.pilot-environment-section {
+  margin-bottom: 20px;
+}
+
+.pilot-environment-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.pilot-environment-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pilot-environment-title {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pilot-environment-checked {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.pilot-environment-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pilot-environment-status.valid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pilot-environment-status.invalid {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pilot-environment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pilot-environment-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.pilot-environment-subtitle {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.pilot-environment-group ul {
+  display: grid;
+  gap: 7px;
+  padding-left: 18px;
+}
+
+.pilot-environment-group li {
+  color: #0f172a;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .audit-events-section {
   margin-bottom: 20px;
 }
@@ -1098,6 +1184,14 @@ table { border-collapse: collapse; width: 100%; }
     grid-template-columns: 1fr;
   }
 
+  .pilot-environment-summary {
+    display: grid;
+  }
+
+  .pilot-environment-grid {
+    grid-template-columns: 1fr;
+  }
+
   .audit-event-header,
   .audit-event-metadata-row {
     display: grid;
@@ -1140,6 +1234,8 @@ body,
 .pilot-go-no-go-category,
 .pilot-go-no-go-item-group,
 .pilot-go-no-go-notes,
+.pilot-environment-card,
+.pilot-environment-group,
 .audit-events-card,
 .audit-event,
 .audit-event-trace span,
@@ -1188,6 +1284,8 @@ body,
 .pilot-go-no-go-category span,
 .pilot-go-no-go-item-group li span,
 .pilot-go-no-go-notes li,
+.pilot-environment-title,
+.pilot-environment-group li,
 .audit-event-title,
 .audit-event-trace span,
 .audit-event-metadata-row,
@@ -1216,6 +1314,8 @@ body,
 .pilot-go-no-go-category strong,
 .pilot-go-no-go-item-group li strong,
 .pilot-go-no-go-subtitle,
+.pilot-environment-checked,
+.pilot-environment-subtitle,
 .audit-event-meta,
 .audit-event-resource,
 .audit-event-trace,
