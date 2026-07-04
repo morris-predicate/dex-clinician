@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
+import AuditEventOperationsPanel from "./components/AuditEventOperationsPanel.jsx";
 import PilotGoNoGoPanel from "./components/PilotGoNoGoPanel.jsx";
 import PilotReadyV1ReadinessPanel from "./components/PilotReadyV1ReadinessPanel.jsx";
 import {
@@ -178,6 +179,12 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
       <PilotGoNoGoPanel
         clinicianKey={clinicianKey}
         clinicId={clinicId}
+      />
+
+      <AuditEventOperationsPanel
+        clinicianKey={clinicianKey}
+        clinicId={clinicId}
+        limit={25}
       />
 
       {filtered.length === 0 ? (

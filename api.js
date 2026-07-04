@@ -107,6 +107,31 @@ export const fetchOpenDxInteractionTrace = ({
   return request(path, opts);
 };
 
+export const fetchInternalAuditEvents = ({
+  patientId,
+  subjectUid,
+  sessionId,
+  eventType,
+  outcome,
+  limit,
+  ...opts
+} = {}) => {
+  const params = new URLSearchParams();
+  if (patientId) params.set("patientId", patientId);
+  if (subjectUid) params.set("subjectUid", subjectUid);
+  if (sessionId) params.set("sessionId", sessionId);
+  if (eventType) params.set("eventType", eventType);
+  if (outcome) params.set("outcome", outcome);
+  if (limit) params.set("limit", String(limit));
+
+  const query = params.toString();
+  const path = query
+    ? `/api/internal/audit-events?${query}`
+    : "/api/internal/audit-events";
+
+  return request(path, opts);
+};
+
 export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
   const candidatePaths = [
     patientId
