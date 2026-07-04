@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { fetchOpenDxInteractionTrace } from "../api.js";
+import { getPatientAccessErrorMessage } from "../patientAccess.js";
 
 export default function OpenDxInteractionTracePanel({
   patientId,
@@ -41,7 +42,12 @@ export default function OpenDxInteractionTracePanel({
       } catch (err) {
         if (!cancelled) {
           setTrace(null);
-          setError(err.message || "Unable to load OpenDx interaction trace.");
+          setError(
+            getPatientAccessErrorMessage(
+              err,
+              "Unable to load OpenDx interaction trace."
+            )
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);

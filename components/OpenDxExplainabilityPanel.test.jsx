@@ -105,4 +105,27 @@ describe("OpenDxExplainabilityPanel", () => {
     expect(container).not.toHaveTextContent(/treatment recommendation/i);
     expect(container).not.toHaveTextContent(/provider opinion/i);
   });
+
+  it("renders safe access-denied copy for scoped 403s", async () => {
+    fetchOpenDxReasoningLedgers.mockRejectedValue({
+      status: 403,
+      message: "Forbidden for clinician-key and private ledger payload",
+    });
+
+    const { container } = render(
+      <OpenDxExplainabilityPanel
+        patientId="patient-123"
+        sessionId="session-456"
+        clinicianKey="clinician-key"
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        "Access denied for this patient under the current practice context."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("clinician-key");
+    expect(container).not.toHaveTextContent("private ledger payload");
+  });
 });

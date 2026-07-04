@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchChatSessionEvents } from "../api.js";
+import { getPatientAccessErrorMessage } from "../patientAccess.js";
 import OpenDxInteractionTracePanel from "./OpenDxInteractionTracePanel.jsx";
 
 const DISPLAY_ROLES = new Set(["user", "patient", "assistant", "milo"]);
@@ -42,7 +43,12 @@ export default function AskMiloSessionEventsPanel({
       } catch (err) {
         if (!cancelled) {
           setEvents([]);
-          setError(err.message || "Unable to load Ask MILO session events.");
+          setError(
+            getPatientAccessErrorMessage(
+              err,
+              "Unable to load Ask MILO session events."
+            )
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);

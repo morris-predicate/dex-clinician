@@ -151,4 +151,26 @@ describe("AuditEventOperationsPanel", () => {
       await screen.findByText("No internal audit events are available yet.")
     ).toBeInTheDocument();
   });
+
+  it("renders safe access-denied copy for patient-filtered 403s", async () => {
+    fetchInternalAuditEvents.mockRejectedValue({
+      status: 403,
+      message: "Forbidden for clinician-key and private audit payload",
+    });
+
+    const { container } = render(
+      <AuditEventOperationsPanel
+        patientId="patient-123"
+        clinicianKey="clinician-key"
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        "Access denied for this patient under the current practice context."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("clinician-key");
+    expect(container).not.toHaveTextContent("private audit payload");
+  });
 });

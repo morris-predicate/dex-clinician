@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchOpenDxReasoningLedgers } from "../api.js";
+import { getPatientAccessErrorMessage } from "../patientAccess.js";
 
 export default function OpenDxExplainabilityPanel({
   patientId,
@@ -39,7 +40,12 @@ export default function OpenDxExplainabilityPanel({
       } catch (err) {
         if (!cancelled) {
           setLedger(null);
-          setError(err.message || "Unable to load OpenDx reasoning ledger.");
+          setError(
+            getPatientAccessErrorMessage(
+              err,
+              "Unable to load OpenDx reasoning ledger."
+            )
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);

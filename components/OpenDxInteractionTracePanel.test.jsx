@@ -108,4 +108,28 @@ describe("OpenDxInteractionTracePanel", () => {
     expect(container).not.toHaveTextContent(/\bdiagnosis\b/i);
     expect(container).not.toHaveTextContent(/treatment recommendation/i);
   });
+
+  it("renders safe access-denied copy for scoped 403s", async () => {
+    fetchOpenDxInteractionTrace.mockRejectedValue({
+      status: 403,
+      message: "Forbidden for clinician-key and private trace payload",
+    });
+
+    const { container } = render(
+      <OpenDxInteractionTracePanel
+        patientId="patient-123"
+        sessionId="session-789"
+        interactionId="interaction-123"
+        clinicianKey="clinician-key"
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        "Access denied for this patient under the current practice context."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("clinician-key");
+    expect(container).not.toHaveTextContent("private trace payload");
+  });
 });

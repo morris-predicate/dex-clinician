@@ -15,6 +15,52 @@ afterEach(() => {
 });
 
 describe("clinician actor headers", () => {
+  it("sends practice and actor headers on patient-specific reads", async () => {
+    const { fetchPatient } = await importApi();
+
+    await fetchPatient({
+      patientId: "patient-123",
+      clinicianKey: "dashboard-secret",
+      clinicianId: "clinician-123",
+      clinicianRole: "reviewing_clinician",
+      clinicId: "alpha-v1",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/clinician/patients/patient-123?clinicId=alpha-v1",
+      expect.objectContaining({
+        headers: {
+          "x-clinician-key": "dashboard-secret",
+          "x-clinician-id": "clinician-123",
+          "x-clinician-role": "reviewing_clinician",
+          "x-practice-id": "alpha-v1",
+        },
+      })
+    );
+  });
+
+  it("sanitizes 403 errors for patient-specific reads", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: vi.fn().mockResolvedValue({
+        error: "Forbidden for dashboard-secret and patient private payload",
+      }),
+    });
+    const { fetchPatient } = await importApi();
+
+    await expect(
+      fetchPatient({
+        patientId: "patient-123",
+        clinicianKey: "dashboard-secret",
+        clinicId: "alpha-v1",
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      message: "Access denied for this patient under the current practice context.",
+    });
+  });
+
   it("sends actor headers with clinician review actions", async () => {
     const { markCareTeamUpdateReviewed } = await importApi();
 

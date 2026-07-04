@@ -11,11 +11,14 @@ import HighchartsReact from "highcharts-react-official";
 import ForceGraph2D from "react-force-graph-2d";
 import AskMiloSessionEventsPanel from "./components/AskMiloSessionEventsPanel.jsx";
 import OpenDxExplainabilityPanel from "./components/OpenDxExplainabilityPanel.jsx";
+import { getPatientAccessErrorMessage } from "./patientAccess.js";
 import {
+  buildClinicianHeaders,
   fetchPatient,
   fetchTranscript,
   fetchPatientBaseline,
   fetchPatientVitals,
+  fetchPatientSignals,
 } from "./api.js";
 
 // Same display order + labels as the patient PWA's done screen, for consistency.
@@ -1796,7 +1799,7 @@ export default function PatientDetail({
       .catch((err) => {
         if (cancelled) return;
         if (err.status === 401) onLogout();
-        else setError(err.message);
+        else setError(getPatientAccessErrorMessage(err, err.message));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -1826,9 +1829,7 @@ async function loadFusionSummary() {
     const res = await fetch(
       `https://dex-proxy-production.up.railway.app/api/fusion/${encodeURIComponent(patientId)}/summary`,
       {
-        headers: {
-          "X-Clinician-Key": clinicianKey,
-        },
+        headers: buildClinicianHeaders({ clinicianKey, clinicId }),
       }
     );
 
@@ -1856,9 +1857,7 @@ async function loadTemporalTimeline() {
     const res = await fetch(
       `https://dex-proxy-production.up.railway.app/api/fusion/${encodeURIComponent(patientId)}/timeline`,
       {
-        headers: {
-          "X-Clinician-Key": clinicianKey,
-        },
+        headers: buildClinicianHeaders({ clinicianKey, clinicId }),
       }
     );
 
@@ -1890,16 +1889,11 @@ async function loadCurrentSignalInsight(patientData) {
   setCurrentSignalInsightLoading(true);
 
   try {
-    const res = await fetch(
-      `https://dex-proxy-production.up.railway.app/api/signals/current?subjectUid=${encodeURIComponent(subjectUid)}`,
-      {
-        headers: {
-          "X-Clinician-Key": clinicianKey,
-        },
-      }
-    );
-
-    const data = await res.json();
+    const data = await fetchPatientSignals({
+      patientId,
+      clinicianKey,
+      clinicId,
+    });
 
     if (data?.ok) {
       setCurrentSignalInsight(data);
@@ -1930,7 +1924,7 @@ async function handleToggleTranscript() {
       setTranscript(t);
       setShowTranscript(true);
     } catch (err) {
-      setTranscriptError(err.message);
+      setTranscriptError(getPatientAccessErrorMessage(err, err.message));
     } finally {
       setTranscriptLoading(false);
     }

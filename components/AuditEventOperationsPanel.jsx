@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchInternalAuditEvents } from "../api.js";
+import { getPatientAccessErrorMessage } from "../patientAccess.js";
 
 const UNSAFE_METADATA_KEYS = [
   "address",
@@ -65,7 +66,12 @@ export default function AuditEventOperationsPanel({
       } catch (err) {
         if (!cancelled) {
           setEvents([]);
-          setError(err.message || "Unable to load internal audit events.");
+          setError(
+            getPatientAccessErrorMessage(
+              err,
+              "Unable to load internal audit events."
+            )
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);

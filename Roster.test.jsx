@@ -168,4 +168,36 @@ describe("CareTeamUpdatesSection", () => {
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
     expect(screen.getByText(/Jul 4/)).toBeInTheDocument();
   });
+
+  it("renders safe access-denied copy when review is denied", async () => {
+    const onMarkReviewed = vi.fn().mockRejectedValue({
+      status: 403,
+      message: "Forbidden for clinician-key and private update payload",
+    });
+
+    const { container } = render(
+      <CareTeamUpdatesSection
+        updates={[
+          {
+            id: "update-1",
+            patientId: "patient-123",
+            triggerMessage: "Please review elevated symptom concern.",
+            summaryDraft: "Draft for clinician review.",
+            status: "dashboard_ready",
+          },
+        ]}
+        onMarkReviewed={onMarkReviewed}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark reviewed" }));
+
+    expect(
+      await screen.findByText(
+        "Access denied for this patient under the current practice context."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("clinician-key");
+    expect(container).not.toHaveTextContent("private update payload");
+  });
 });

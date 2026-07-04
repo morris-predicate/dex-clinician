@@ -107,4 +107,36 @@ describe("Ask MILO care-team dashboard loop", () => {
     expect(container).not.toHaveTextContent("message read");
     expect(container).not.toHaveTextContent("Message read");
   });
+
+  it("renders safe access-denied copy when care-team updates are denied", async () => {
+    fetchRoster.mockResolvedValue({
+      patients: [
+        {
+          patientId: "patient-123",
+          name: "Test Patient",
+        },
+      ],
+    });
+    fetchCareTeamUpdates.mockRejectedValue({
+      status: 403,
+      message: "Forbidden for clinician-key and private care-team payload",
+    });
+
+    const { container } = render(
+      React.createElement(Roster, {
+        clinicId: "alpha-v1",
+        clinicianKey: "clinician-key",
+        onSelectPatient: vi.fn(),
+        onLogout: vi.fn(),
+      })
+    );
+
+    expect(
+      await screen.findByText(
+        "Access denied for this patient under the current practice context."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("clinician-key");
+    expect(container).not.toHaveTextContent("private care-team payload");
+  });
 });

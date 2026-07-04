@@ -3,6 +3,8 @@
  * All endpoints require both x-clinician-key (auth) and clinicId (scope).
  */
 
+import { PATIENT_ACCESS_DENIED_MESSAGE } from "./patientAccess.js";
+
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "";
 const DEFAULT_CLINICIAN_ID = "unknown_clinician";
 const DEFAULT_CLINICIAN_ROLE = "clinician";
@@ -62,6 +64,7 @@ async function request(
     practiceId,
     clinicId,
     method = "GET",
+    patientScoped = false,
   } = {}
 ) {
   const url = new URL(`${PROXY_URL}${path}`);
@@ -85,7 +88,11 @@ async function request(
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `Request failed (${res.status})`);
+    const message =
+      patientScoped && res.status === 403
+        ? PATIENT_ACCESS_DENIED_MESSAGE
+        : data.error || `Request failed (${res.status})`;
+    const err = new Error(message);
     err.status = res.status;
     throw err;
   }
@@ -95,21 +102,40 @@ async function request(
 export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
 
 export const fetchPatient = ({ patientId, ...opts }) =>
-  request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, opts);
+  request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, {
+    ...opts,
+    patientScoped: true,
+  });
 
 export const fetchTranscript = ({ patientId, ...opts }) =>
-  request(`/api/clinician/patients/${encodeURIComponent(patientId)}/transcript`, opts);
+  request(`/api/clinician/patients/${encodeURIComponent(patientId)}/transcript`, {
+    ...opts,
+    patientScoped: true,
+  });
 
 export const fetchPatientBaseline = ({ patientId, ...opts }) =>
-  request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, opts);
+  request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, {
+    ...opts,
+    patientScoped: true,
+  });
+
+export const fetchPatientSignals = ({ patientId, ...opts }) =>
+  request(`/api/clinician/patients/${encodeURIComponent(patientId)}/signals`, {
+    ...opts,
+    patientScoped: true,
+  });
 
 export const fetchCareTeamUpdates = (opts) =>
-  request("/api/clinician/care-team-updates", opts);
+  request("/api/clinician/care-team-updates", {
+    ...opts,
+    patientScoped: true,
+  });
 
 export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
   request(`/api/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
     ...opts,
     method: "POST",
+    patientScoped: true,
   });
 
 export const fetchOpenDxReasoningLedgers = ({ patientId, sessionId, ...opts }) => {
@@ -122,7 +148,10 @@ export const fetchOpenDxReasoningLedgers = ({ patientId, sessionId, ...opts }) =
     ? `/api/opendx/reasoning-ledgers?${query}`
     : "/api/opendx/reasoning-ledgers";
 
-  return request(path, opts);
+  return request(path, {
+    ...opts,
+    patientScoped: Boolean(patientId || sessionId),
+  });
 };
 
 export const fetchPilotReadyV1Readiness = (opts) =>
@@ -147,7 +176,10 @@ export const fetchChatSessionEvents = ({
     ? `/api/chat/session-events?${query}`
     : "/api/chat/session-events";
 
-  return request(path, opts);
+  return request(path, {
+    ...opts,
+    patientScoped: Boolean(patientId || subjectUid || sessionId),
+  });
 };
 
 export const fetchOpenDxInteractionTrace = ({
@@ -168,7 +200,10 @@ export const fetchOpenDxInteractionTrace = ({
     ? `/api/opendx/interaction-trace?${query}`
     : "/api/opendx/interaction-trace";
 
-  return request(path, opts);
+  return request(path, {
+    ...opts,
+    patientScoped: Boolean(patientId || subjectUid || sessionId || interactionId),
+  });
 };
 
 export const fetchInternalAuditEvents = ({
@@ -193,10 +228,21 @@ export const fetchInternalAuditEvents = ({
     ? `/api/internal/audit-events?${query}`
     : "/api/internal/audit-events";
 
-  return request(path, opts);
+  return request(path, {
+    ...opts,
+    patientScoped: Boolean(patientId || subjectUid || sessionId),
+  });
 };
 
-export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, clinicId }) {
+export async function fetchPatientVitals({
+  patientId,
+  subjectUid,
+  clinicianKey,
+  clinicianId,
+  clinicianRole,
+  practiceId,
+  clinicId,
+}) {
   const candidatePaths = [
     patientId
       ? `/api/patients/${encodeURIComponent(patientId)}/vitals`
@@ -227,7 +273,14 @@ export async function fetchPatientVitals({ patientId, subjectUid, clinicianKey, 
 
   for (const path of candidatePaths) {
     try {
-      const data = await request(path, { clinicianKey, clinicId });
+      const data = await request(path, {
+        clinicianKey,
+        clinicianId,
+        clinicianRole,
+        practiceId,
+        clinicId,
+        patientScoped: true,
+      });
 
       const candidate =
         Array.isArray(data)

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import AuditEventOperationsPanel from "./components/AuditEventOperationsPanel.jsx";
 import PilotGoNoGoPanel from "./components/PilotGoNoGoPanel.jsx";
 import PilotReadyV1ReadinessPanel from "./components/PilotReadyV1ReadinessPanel.jsx";
+import { getPatientAccessErrorMessage } from "./patientAccess.js";
 import {
   fetchCareTeamUpdates,
   fetchRoster,
@@ -41,7 +42,12 @@ export default function Roster({ clinicId, clinicianKey, onSelectPatient, onLogo
         setCareTeamUpdatesError(null);
       } else {
         setCareTeamUpdates([]);
-        setCareTeamUpdatesError("Ask MILO care-team updates are unavailable right now.");
+        setCareTeamUpdatesError(
+          getPatientAccessErrorMessage(
+            careTeamUpdatesResult.reason,
+            "Ask MILO care-team updates are unavailable right now."
+          )
+        );
       }
 
       setLastUpdated(new Date());
@@ -226,7 +232,10 @@ export function CareTeamUpdatesSection({
     } catch (err) {
       setReviewErrors((current) => ({
         ...current,
-        [updateId]: err.message || "Could not mark this update reviewed.",
+        [updateId]: getPatientAccessErrorMessage(
+          err,
+          "Could not mark this update reviewed."
+        ),
       }));
     } finally {
       setReviewingIds((ids) => ids.filter((id) => id !== updateId));
