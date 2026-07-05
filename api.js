@@ -177,6 +177,16 @@ export const createBackupRestoreEvidence = ({ payload, ...opts } = {}) =>
     body: sanitizeBackupRestoreEvidencePayload(payload),
   });
 
+export const fetchClinicalGovernanceEvidence = (opts) =>
+  request("/api/pilot-ready-v1/clinical-governance-evidence", opts);
+
+export const createClinicalGovernanceEvidence = ({ payload, ...opts } = {}) =>
+  request("/api/pilot-ready-v1/clinical-governance-evidence", {
+    ...opts,
+    method: "POST",
+    body: sanitizeClinicalGovernanceEvidencePayload(payload),
+  });
+
 export const fetchChatSessionEvents = ({
   patientId,
   subjectUid,
@@ -287,6 +297,16 @@ function sanitizeBackupRestoreEvidencePayload(payload = {}) {
     subsystem: payload.subsystem || "",
     status: payload.status || "",
     verifiedBy: payload.verifiedBy || "",
+    notes: sanitizeInternalEvidenceNotes(payload.notes || ""),
+  };
+}
+
+function sanitizeClinicalGovernanceEvidencePayload(payload = {}) {
+  return {
+    evidenceType: payload.evidenceType || "",
+    status: payload.status || "",
+    reviewedBy: payload.reviewedBy || "",
+    reviewerRole: payload.reviewerRole || "",
     notes: sanitizeInternalEvidenceNotes(payload.notes || ""),
   };
 }

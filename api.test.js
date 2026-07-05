@@ -196,6 +196,41 @@ describe("clinician actor headers", () => {
       })
     );
   });
+
+  it("posts sanitized clinical governance evidence", async () => {
+    const { createClinicalGovernanceEvidence } = await importApi();
+
+    await createClinicalGovernanceEvidence({
+      clinicianKey: "dashboard-secret",
+      clinicId: "alpha-v1",
+      payload: {
+        evidenceType: "clinical_review",
+        status: "approved",
+        reviewedBy: "reviewer-1",
+        reviewerRole: "Medical Director",
+        notes: "Patient Jane Example API key secret-value was discussed.",
+      },
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/pilot-ready-v1/clinical-governance-evidence?clinicId=alpha-v1",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "content-type": "application/json",
+          "x-clinician-key": "dashboard-secret",
+          "x-practice-id": "alpha-v1",
+        }),
+        body: JSON.stringify({
+          evidenceType: "clinical_review",
+          status: "approved",
+          reviewedBy: "reviewer-1",
+          reviewerRole: "Medical Director",
+          notes: "Notes omitted because they may contain PHI or secrets.",
+        }),
+      })
+    );
+  });
 });
 
 async function importApi() {

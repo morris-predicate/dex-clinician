@@ -2,6 +2,7 @@ import React from "react";
 import { useEffect, useState, useCallback } from "react";
 import AuditEventOperationsPanel from "./components/AuditEventOperationsPanel.jsx";
 import BackupRestoreEvidencePanel from "./components/BackupRestoreEvidencePanel.jsx";
+import ClinicalGovernanceEvidencePanel from "./components/ClinicalGovernanceEvidencePanel.jsx";
 import MonitoringEventOperationsPanel from "./components/MonitoringEventOperationsPanel.jsx";
 import PilotEnvironmentValidationPanel from "./components/PilotEnvironmentValidationPanel.jsx";
 import PilotGoNoGoPanel from "./components/PilotGoNoGoPanel.jsx";
@@ -196,6 +197,11 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
       />
 
       <BackupRestoreEvidencePanel
+        clinicianKey={clinicianKey}
+        clinicId={clinicId}
+      />
+
+      <ClinicalGovernanceEvidencePanel
         clinicianKey={clinicianKey}
         clinicId={clinicId}
       />
