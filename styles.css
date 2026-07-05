@@ -605,6 +605,102 @@ table { border-collapse: collapse; width: 100%; }
   overflow-wrap: anywhere;
 }
 
+.monitoring-events-section {
+  margin-bottom: 20px;
+}
+
+.monitoring-events-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.monitoring-events-list {
+  display: grid;
+  gap: 12px;
+}
+
+.monitoring-event {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.monitoring-event-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.monitoring-event-title {
+  color: #0f172a;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.monitoring-event-meta,
+.monitoring-event-resource,
+.monitoring-event-detail-row strong {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.monitoring-event-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.monitoring-event-severity,
+.monitoring-event-outcome {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.monitoring-event-severity.critical,
+.monitoring-event-outcome.failure {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.monitoring-event-resource {
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+}
+
+.monitoring-event-detail {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.monitoring-event-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.monitoring-event-detail-row span {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .audit-events-section {
   margin-bottom: 20px;
 }
@@ -1192,6 +1288,19 @@ table { border-collapse: collapse; width: 100%; }
     grid-template-columns: 1fr;
   }
 
+  .monitoring-event-header,
+  .monitoring-event-detail-row {
+    display: grid;
+  }
+
+  .monitoring-event-badges {
+    justify-content: flex-start;
+  }
+
+  .monitoring-event-detail-row span {
+    text-align: left;
+  }
+
   .audit-event-header,
   .audit-event-metadata-row {
     display: grid;
@@ -1236,6 +1345,8 @@ body,
 .pilot-go-no-go-notes,
 .pilot-environment-card,
 .pilot-environment-group,
+.monitoring-events-card,
+.monitoring-event,
 .audit-events-card,
 .audit-event,
 .audit-event-trace span,
@@ -1286,6 +1397,8 @@ body,
 .pilot-go-no-go-notes li,
 .pilot-environment-title,
 .pilot-environment-group li,
+.monitoring-event-title,
+.monitoring-event-detail-row,
 .audit-event-title,
 .audit-event-trace span,
 .audit-event-metadata-row,
@@ -1316,6 +1429,9 @@ body,
 .pilot-go-no-go-subtitle,
 .pilot-environment-checked,
 .pilot-environment-subtitle,
+.monitoring-event-meta,
+.monitoring-event-resource,
+.monitoring-event-detail-row strong,
 .audit-event-meta,
 .audit-event-resource,
 .audit-event-trace,

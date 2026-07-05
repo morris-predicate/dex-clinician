@@ -237,6 +237,36 @@ export const fetchInternalAuditEvents = ({
   });
 };
 
+export const fetchInternalMonitoringEvents = ({
+  subsystem,
+  severity,
+  outcome,
+  patientId,
+  subjectUid,
+  sessionId,
+  limit,
+  ...opts
+} = {}) => {
+  const params = new URLSearchParams();
+  if (subsystem) params.set("subsystem", subsystem);
+  if (severity) params.set("severity", severity);
+  if (outcome) params.set("outcome", outcome);
+  if (patientId) params.set("patientId", patientId);
+  if (subjectUid) params.set("subjectUid", subjectUid);
+  if (sessionId) params.set("sessionId", sessionId);
+  if (limit) params.set("limit", String(limit));
+
+  const query = params.toString();
+  const path = query
+    ? `/api/internal/monitoring-events?${query}`
+    : "/api/internal/monitoring-events";
+
+  return request(path, {
+    ...opts,
+    patientScoped: Boolean(patientId || subjectUid || sessionId),
+  });
+};
+
 export async function fetchPatientVitals({
   patientId,
   subjectUid,
