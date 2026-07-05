@@ -65,20 +65,24 @@ async function request(
     clinicId,
     method = "GET",
     patientScoped = false,
+    body,
   } = {}
 ) {
   const url = new URL(`${PROXY_URL}${path}`);
   if (clinicId) url.searchParams.set("clinicId", clinicId);
+  const headers = buildClinicianHeaders({
+    clinicianKey,
+    clinicianId,
+    clinicianRole,
+    practiceId,
+    clinicId,
+  });
+  if (body !== undefined) headers["content-type"] = "application/json";
 
   const res = await fetch(url.toString(), {
     method,
-    headers: buildClinicianHeaders({
-      clinicianKey,
-      clinicianId,
-      clinicianRole,
-      practiceId,
-      clinicId,
-    }),
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 
   if (res.status === 401) {
@@ -162,6 +166,16 @@ export const fetchPilotGoNoGoChecklist = (opts) =>
 
 export const fetchPilotEnvironmentValidation = (opts) =>
   request("/api/pilot-ready-v1/environment", opts);
+
+export const fetchBackupRestoreEvidence = (opts) =>
+  request("/api/pilot-ready-v1/backup-restore-evidence", opts);
+
+export const createBackupRestoreEvidence = ({ payload, ...opts } = {}) =>
+  request("/api/pilot-ready-v1/backup-restore-evidence", {
+    ...opts,
+    method: "POST",
+    body: sanitizeBackupRestoreEvidencePayload(payload),
+  });
 
 export const fetchChatSessionEvents = ({
   patientId,
@@ -266,6 +280,37 @@ export const fetchInternalMonitoringEvents = ({
     patientScoped: Boolean(patientId || subjectUid || sessionId),
   });
 };
+
+function sanitizeBackupRestoreEvidencePayload(payload = {}) {
+  return {
+    evidenceType: payload.evidenceType || "",
+    subsystem: payload.subsystem || "",
+    status: payload.status || "",
+    verifiedBy: payload.verifiedBy || "",
+    notes: sanitizeInternalEvidenceNotes(payload.notes || ""),
+  };
+}
+
+function sanitizeInternalEvidenceNotes(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+
+  const unsafePatterns = [
+    /patient\s+[a-z]/i,
+    /\bmrn\b/i,
+    /\bdob\b/i,
+    /\bssn\b/i,
+    /\bsecret\b/i,
+    /\btoken\b/i,
+    /\bpassword\b/i,
+    /\bapi[_ -]?key\b/i,
+    /bearer\s+\S+/i,
+  ];
+
+  return unsafePatterns.some((pattern) => pattern.test(text))
+    ? "Notes omitted because they may contain PHI or secrets."
+    : text;
+}
 
 export async function fetchPatientVitals({
   patientId,

@@ -161,6 +161,41 @@ describe("clinician actor headers", () => {
 
     expect(global.fetch.mock.calls[0][0]).not.toContain("dashboard-secret");
   });
+
+  it("posts sanitized backup restore evidence", async () => {
+    const { createBackupRestoreEvidence } = await importApi();
+
+    await createBackupRestoreEvidence({
+      clinicianKey: "dashboard-secret",
+      clinicId: "alpha-v1",
+      payload: {
+        evidenceType: "restore_drill",
+        subsystem: "database",
+        status: "verified",
+        verifiedBy: "ops-user",
+        notes: "Patient Jane Example token secret-value was present.",
+      },
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/pilot-ready-v1/backup-restore-evidence?clinicId=alpha-v1",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "content-type": "application/json",
+          "x-clinician-key": "dashboard-secret",
+          "x-practice-id": "alpha-v1",
+        }),
+        body: JSON.stringify({
+          evidenceType: "restore_drill",
+          subsystem: "database",
+          status: "verified",
+          verifiedBy: "ops-user",
+          notes: "Notes omitted because they may contain PHI or secrets.",
+        }),
+      })
+    );
+  });
 });
 
 async function importApi() {
