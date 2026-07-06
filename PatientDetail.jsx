@@ -1063,8 +1063,8 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
   const mainChartOptions = useMemo(() => ({
             chart: {
       type: "spline",
-      backgroundColor: "#0F172A",
-      plotBackgroundColor: "#0F172A",
+      backgroundColor: "transparent",
+      plotBackgroundColor: "transparent",
       style: { fontFamily: "inherit" },
       height: 280,
       marginRight: 80,
@@ -1102,23 +1102,23 @@ function TimeAlignedInsights({ vitals, voiceDeviation, baseline, patient, }) {
     credits: { enabled: false },
     legend: {
       enabled: true,
-      itemStyle: { color: "#94A3B8", fontSize: "11px" },
-      itemHoverStyle: { color: "#FFFFFF" },
+      itemStyle: { color: "#A7B0C0", fontSize: "11px" },
+      itemHoverStyle: { color: "#00E5FF" },
     },
 xAxis: {
   type: "datetime",
   min: now - windowMs,
   max: now,
-  gridLineColor: "#1E293B",
-  lineColor: "#334155",
-  tickColor: "#334155",
+  gridLineColor: "rgba(146, 93, 255, 0.18)",
+  lineColor: "rgba(0, 229, 255, 0.26)",
+  tickColor: "rgba(0, 229, 255, 0.26)",
   crosshair: {
     width: 1,
-    color: "#94A3B8",
+    color: "#00E5FF",
     dashStyle: "ShortDash",
   },
   labels: {
-    style: { color: "#64748B", fontSize: "11px" },
+    style: { color: "#A7B0C0", fontSize: "11px" },
     formatter: function () {
       if (timeWindow === "7d") {
         return Highcharts.dateFormat("%b %e", this.value);
@@ -1368,7 +1368,7 @@ tooltip: {
   const vdiChartOptions = useMemo(() => ({
     chart: {
       type: "bar",
-      backgroundColor: "#0F172A",
+      backgroundColor: "transparent",
       style: { fontFamily: "inherit" },
       height: 170,
       marginRight: 80,
@@ -1376,27 +1376,27 @@ tooltip: {
     },
     title: {
       text: "Voice Deviation Index (VDI)",
-      style: { color: "#94A3B8", fontSize: "12px", fontWeight: "700" },
+      style: { color: "#F5F7FB", fontSize: "12px", fontWeight: "700" },
       align: "left",
       margin: 12,
     },
     subtitle: {
       text: "Per-feature deviation from voice baseline · descriptive only",
-      style: { color: "#64748B", fontSize: "10px" },
+      style: { color: "#A7B0C0", fontSize: "10px" },
       align: "left",
     },
     credits: { enabled: false },
     legend: { enabled: false },
     xAxis: {
       categories: vdiBarData?.map(d => d.name) || [],
-      labels: { style: { color: "#64748B", fontSize: "10px" } },
-      lineColor: "#334155",
-      tickColor: "#334155",
+      labels: { style: { color: "#A7B0C0", fontSize: "10px" } },
+      lineColor: "rgba(0, 229, 255, 0.26)",
+      tickColor: "rgba(0, 229, 255, 0.26)",
     },
     yAxis: {
-      title: { text: "Score", style: { color: "#64748B", fontSize: "10px" } },
-      gridLineColor: "#1E293B",
-      labels: { style: { color: "#64748B", fontSize: "10px" } },
+      title: { text: "Score", style: { color: "#A7B0C0", fontSize: "10px" } },
+      gridLineColor: "rgba(146, 93, 255, 0.18)",
+      labels: { style: { color: "#A7B0C0", fontSize: "10px" } },
       max: 100,
       min: 0,
       plotBands: [
@@ -1407,9 +1407,9 @@ tooltip: {
       ],
     },
     tooltip: {
-      backgroundColor: "#1E293B",
-      borderColor: "#334155",
-      style: { color: "#F8FAFC" },
+      backgroundColor: "rgba(18, 10, 36, 0.96)",
+      borderColor: "rgba(0, 229, 255, 0.45)",
+      style: { color: "#F5F7FB" },
       formatter() { return `<b>${this.point.name}</b>: ${this.y} / 100`; },
     },
     series: [{
@@ -1444,28 +1444,29 @@ tooltip: {
   
   return (
     <div style={{
-      border: "1px solid #1E293B",
+      border: "1px solid rgba(146, 93, 255, 0.28)",
       borderRadius: 14,
       overflow: "hidden",
-      background: "#0F172A",
+      background: "rgba(20, 18, 38, 0.92)",
+      boxShadow: "0 20px 70px rgba(0, 0, 0, 0.28)",
     }}>
 
       {/* ── Header ── */}
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-        padding: "14px 18px 12px", borderBottom: "1px solid #1E293B",
+        padding: "14px 18px 12px", borderBottom: "1px solid rgba(146, 93, 255, 0.22)",
       }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-              stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              stroke="#00E5FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#F8FAFC" }}>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "#F5F7FB" }}>
               Time-Aligned Insights
             </span>
           </div>
-          <div style={{ fontSize: 11, color: "#475569", marginTop: 3 }}>
+          <div style={{ fontSize: 11, color: "#A7B0C0", marginTop: 3 }}>
             Temporal relationships across multiple data streams – descriptive only
           </div>
         </div>
@@ -1477,17 +1478,17 @@ tooltip: {
                 padding: "3px 9px",
                 borderRadius: 6,
                 border: "1px solid",
-                borderColor: timeWindow === w ? "#3B82F6" : "#334155",
-                background: timeWindow === w ? "rgba(59,130,246,0.15)" : "transparent",
-                color: timeWindow === w ? "#60A5FA" : "#64748B",
+                borderColor: timeWindow === w ? "#00E5FF" : "rgba(146, 93, 255, 0.28)",
+                background: timeWindow === w ? "rgba(0,229,255,0.12)" : "transparent",
+                color: timeWindow === w ? "#00E5FF" : "#A7B0C0",
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}>
                 {w}
               </button>
             ))}
           </div>
-          <span style={{ color: "#334155", fontSize: 12 }}>|</span>
-          <span style={{ fontSize: 11, color: "#475569" }}>{dateLabel}</span>
+          <span style={{ color: "rgba(146, 93, 255, 0.38)", fontSize: 12 }}>|</span>
+          <span style={{ fontSize: 11, color: "#A7B0C0" }}>{dateLabel}</span>
         </div>
       </div>
 

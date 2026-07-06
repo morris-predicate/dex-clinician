@@ -9,6 +9,15 @@ import {
 
 const REFRESH_MS = 60_000;
 
+const CLINICAL_NAV_ITEMS = [
+  "Clinical Command",
+  "Patient Intelligence",
+  "Review Queue",
+  "Care-Team Updates",
+  "OpenDx Reasoning",
+  "Interaction Trace",
+];
+
 export default function Roster({
   clinicId,
   clinicianKey,
@@ -129,96 +138,296 @@ const prioritizedPatients = [...filtered].sort((a, b) => {
 });
 
 const withSessions = filtered.filter((p) => p.latestSessionId).length;
+const reviewFirstCount = patients.filter((p) => getReviewStatus(p).label === "Review first").length;
+const watchCloselyCount = patients.filter((p) => getReviewStatus(p).label === "Watch closely").length;
+const signalCoverageCount = patients.filter((p) =>
+  getRosterMetricConfig(p).some(hasRosterMetricValue)
+).length;
+const reviewUpdateCount = careTeamUpdates.filter((update) =>
+  ["dashboard_ready", "needs_review", "Ready for review"].includes(update.rawStatus || update.status)
+).length;
+const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || null;
 
   if (loading && patients.length === 0) {
     return <div className="page-loading">Loading roster…</div>;
   }
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <div>
-          <div className="page-title">Patients</div>
-          <div className="page-sub">
-            {clinicId} · {patients.length} enrolled · {withSessions} with sessions
-            {lastUpdated && <> · updated {formatTime(lastUpdated)}</>}
+    <div className="command-shell">
+      <aside className="command-nav" aria-label="Predicate Clinical Intelligence">
+        <div className="command-brand">
+          <div className="command-brand-mark">P</div>
+          <div>
+            <strong>Predicate</strong>
+            <span>Clinical Intelligence</span>
           </div>
         </div>
-        <div className="page-actions">
+
+        <nav className="command-nav-list">
+          {CLINICAL_NAV_ITEMS.map((item, index) => (
+            <button
+              key={item}
+              type="button"
+              className={index === 0 ? "command-nav-item active" : "command-nav-item"}
+            >
+              <span />
+              {item}
+            </button>
+          ))}
+
           {canAccessStatusAudit && (
             <button
-              className="btn-secondary-small"
               type="button"
+              className="command-nav-item"
               onClick={onOpenStatusAudit}
             >
-              Status/Audit
+              <span />
+              Launch Readiness
             </button>
           )}
-          <button className="btn-text" onClick={onLogout}>Sign out</button>
+        </nav>
+
+        <div className="command-nav-footer">
+          <span>Practice scope</span>
+          <strong>{clinicId}</strong>
         </div>
-      </header>
+      </aside>
 
-      <div className="page-controls">
-        <input
-          type="search"
-          className="search-input"
-          placeholder="Search by name, patient ID, or subject ID…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {patientEnrollmentSupported && (
-          <button
-            className="btn-primary-small"
-            type="button"
-            onClick={onEnrollPatient}
-          >
-            Enroll Patient
-          </button>
-        )}
-      </div>
+      <main className="page command-main">
+        <header className="command-topbar">
+          <div>
+            <div className="command-kicker">OpenDx powered review cockpit</div>
+            <div className="page-title">Predicate Clinical Intelligence</div>
+            <div className="page-sub">
+              {patients.length} monitored · {withSessions} with sessions
+              {lastUpdated && <> · refreshed {formatTime(lastUpdated)}</>}
+            </div>
+          </div>
 
-<div className="roster-status-legend">
-  <span>
-    <strong>Review first</strong> meaningful signal changes or convergence
-  </span>
-  <span>
-    <strong>Watch closely</strong> recent session or moderate signal context
-  </span>
-  <span>
-    <strong>Near usual</strong> no noteworthy signal changes detected
-  </span>
-  <span>
-    <strong>Awaiting session</strong> no patient voice session yet
-  </span>
-</div>
+          <div className="command-topbar-actions">
+            <span className="command-status-pill">Pilot-Ready v1</span>
+            <span className="command-status-pill healthy">Operations healthy</span>
+            {canAccessStatusAudit && (
+              <button
+                className="btn-secondary-small"
+                type="button"
+                onClick={onOpenStatusAudit}
+              >
+                Status/Audit
+              </button>
+            )}
+            <button className="btn-text" onClick={onLogout}>Sign out</button>
+          </div>
+        </header>
+
+        <div className="command-searchbar">
+          <input
+            type="search"
+            className="search-input"
+            placeholder="Search patients, sessions, subjects, traces…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {patientEnrollmentSupported && (
+            <button
+              className="btn-primary-small"
+              type="button"
+              onClick={onEnrollPatient}
+            >
+              Enroll Patient
+            </button>
+          )}
+        </div>
+
+        <section className="command-kpi-grid" aria-label="Clinical command metrics">
+          <CommandKpiCard label="Patients monitored" value={patients.length} tone="cyan" detail={`${withSessions} with MILO sessions`} />
+          <CommandKpiCard label="Updates requiring review" value={reviewUpdateCount} tone="magenta" detail="Dashboard-ready, not externally sent" />
+          <CommandKpiCard label="Signals requiring review" value={reviewFirstCount} tone="red" detail={`${watchCloselyCount} watch closely`} />
+          <CommandKpiCard label="Signal coverage" value={`${signalCoverageCount}/${patients.length || 0}`} tone="teal" detail="Latest available roster signals" />
+        </section>
 
       {error && (
         <div className="banner-error">{error}</div>
       )}
 
-      <CareTeamUpdatesSection
-        updates={careTeamUpdates}
-        loading={careTeamUpdatesLoading}
-        error={careTeamUpdatesError}
-        onMarkReviewed={handleMarkCareTeamUpdateReviewed}
-      />
+        <div className="command-content-grid">
+          <section className="command-primary-stack">
+            <div className="command-module">
+              <div className="module-heading-row">
+                <div>
+                  <div className="detail-section-title">Review Queue</div>
+                  <h2>Patient Intelligence</h2>
+                </div>
+                <span className="module-count">{prioritizedPatients.length} profiles</span>
+              </div>
 
-      {filtered.length === 0 ? (
-        <div className="empty-state">
-          {search ? "No patients match your search." : "No patients enrolled in this clinic yet."}
+              <div className="roster-status-legend">
+                <span>
+                  <strong>review_now</strong> meaningful signal changes or convergence
+                </span>
+                <span>
+                  <strong>follow_up</strong> recent session or moderate signal context
+                </span>
+                <span>
+                  <strong>stable</strong> no noteworthy signal changes detected
+                </span>
+                <span>
+                  <strong>missing_data</strong> no patient voice session yet
+                </span>
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="empty-state">
+                  {search ? "No patients match your search." : "No patients enrolled in this clinic yet."}
+                </div>
+              ) : (
+                <div className="patient-list">
+                  {prioritizedPatients.map((p) => (
+                    <PatientRow
+                      key={p.patientId}
+                      patient={p}
+                      onClick={() => onSelectPatient(p.patientId)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <CareTeamUpdatesSection
+              updates={careTeamUpdates}
+              loading={careTeamUpdatesLoading}
+              error={careTeamUpdatesError}
+              onMarkReviewed={handleMarkCareTeamUpdateReviewed}
+            />
+          </section>
+
+          <aside className="command-intel-rail" aria-label="Clinical intelligence context">
+            <IntelligenceRail
+              patient={selectedIntelligencePatient}
+              updates={careTeamUpdates}
+              reviewFirstCount={reviewFirstCount}
+              signalCoverageCount={signalCoverageCount}
+              patientCount={patients.length}
+            />
+          </aside>
         </div>
-      ) : (
-        <div className="patient-list">
-  {prioritizedPatients.map((p) => (
-    <PatientRow
-      key={p.patientId}
-      patient={p}
-      onClick={() => onSelectPatient(p.patientId)}
-    />
-  ))}
-</div>
-      )}
+      </main>
     </div>
+  );
+}
+
+function CommandKpiCard({ label, value, detail, tone }) {
+  return (
+    <div className={`command-kpi-card ${tone || ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <em>{detail}</em>
+    </div>
+  );
+}
+
+function IntelligenceRail({
+  patient,
+  updates,
+  reviewFirstCount,
+  signalCoverageCount,
+  patientCount,
+}) {
+  const latestUpdate = updates[0] || null;
+  const reviewStatus = patient ? getReviewStatus(patient) : null;
+  const abnormalSignals = patient ? getAbnormalSignals(patient) : [];
+  const unresolvedSignals = abnormalSignals.slice(0, 4);
+  const coverageLabel = patientCount
+    ? `${Math.round((signalCoverageCount / patientCount) * 100)}%`
+    : "0%";
+
+  return (
+    <>
+      <section className="intel-panel">
+        <div className="detail-section-title">Selected Intelligence</div>
+        {patient ? (
+          <>
+            <h2>{patient.name || "Unnamed patient"}</h2>
+            <div className="intel-meta">
+              <span>Profile {patient.patientId?.slice(-6) || "unknown"}</span>
+              <span>Subject {patient.subjectUid?.slice(-6) || "unknown"}</span>
+            </div>
+            <div className="intel-priority">
+              <span className={reviewStatus.className}>{reviewStatus.label}</span>
+              <p>{getReviewStatusDescription(reviewStatus.label)}</p>
+            </div>
+            <div className="intel-stat-grid">
+              <div>
+                <strong>{abnormalSignals.length}</strong>
+                <span>signals changed</span>
+              </div>
+              <div>
+                <strong>{patient.latestSessionId ? "yes" : "pending"}</strong>
+                <span>MILO session</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="empty-state-small">
+            Select a patient to inspect OpenDx context and provenance.
+          </div>
+        )}
+      </section>
+
+      <section className="intel-panel">
+        <div className="detail-section-title">Signal Intelligence</div>
+        <div className="intel-meter">
+          <span style={{ width: coverageLabel }} />
+        </div>
+        <div className="intel-meter-label">
+          <strong>{coverageLabel}</strong>
+          <span>roster signal coverage</span>
+        </div>
+        <ul className="intel-list">
+          {unresolvedSignals.length ? (
+            unresolvedSignals.map((signal) => (
+              <li key={signal.id || signal.signal || signal.label}>
+                {getSignalChipLabel(signal)}
+              </li>
+            ))
+          ) : (
+            <li>No changed roster signals in the selected context.</li>
+          )}
+        </ul>
+      </section>
+
+      <section className="intel-panel">
+        <div className="detail-section-title">MILO Feed</div>
+        {latestUpdate ? (
+          <>
+            <h3>{latestUpdate.patientId || "Patient update"}</h3>
+            <p>{latestUpdate.summaryDraft || latestUpdate.triggerMessage}</p>
+            <div className="intel-meta">
+              <span>Prepared for clinician dashboard review</span>
+              <span>Not sent outside MILO</span>
+            </div>
+          </>
+        ) : (
+          <div className="empty-state-small">
+            No Ask MILO care-team updates are ready for review yet.
+          </div>
+        )}
+      </section>
+
+      <section className="intel-panel">
+        <div className="detail-section-title">Operations Health</div>
+        <div className="intel-stat-grid">
+          <div>
+            <strong>{reviewFirstCount}</strong>
+            <span>review_now</span>
+          </div>
+          <div>
+            <strong>healthy</strong>
+            <span>pilot operations</span>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
