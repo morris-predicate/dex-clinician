@@ -181,6 +181,19 @@ describe("clinician actor headers", () => {
     );
   });
 
+  it("does not use the legacy production-v1 scope for pilot roster requests", async () => {
+    const { fetchRoster } = await importApi();
+
+    await fetchRoster({
+      clinicianKey: "dashboard-secret",
+      clinicId: "predicate-pilot",
+    });
+
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).not.toContain("production-v1");
+    expect(options.headers["x-practice-id"]).not.toBe("production-v1");
+  });
+
   it("posts sanitized backup restore evidence", async () => {
     const { createBackupRestoreEvidence } = await importApi();
 

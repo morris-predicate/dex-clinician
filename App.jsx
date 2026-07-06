@@ -1,9 +1,15 @@
 import React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Login from "./Login.jsx";
 import Roster from "./Roster.jsx";
 import PatientDetail from "./PatientDetail.jsx";
 import { DEFAULT_CLINIC_ID, normalizeClinicId } from "./clinicConfig.js";
+import StatusAuditPage from "./components/StatusAuditPage.jsx";
+import {
+  canAccessStatusAudit,
+  getConfiguredClinicianRole,
+  isPatientEnrollmentSupported,
+} from "./clinicianAccess.js";
 
 const STORAGE_KEY = "dex.clinician.key";
 
@@ -27,6 +33,9 @@ export default function App() {
     sessionStorage.getItem(STORAGE_KEY)
   );
   const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [activeView, setActiveView] = useState("patients");
+  const clinicianRole = getConfiguredClinicianRole();
+  const statusAuditAllowed = canAccessStatusAudit(clinicianRole);
 
   function handleAuth(key) {
     sessionStorage.setItem(STORAGE_KEY, key);
@@ -37,6 +46,7 @@ export default function App() {
     sessionStorage.removeItem(STORAGE_KEY);
     setClinicianKey(null);
     setSelectedPatientId(null);
+    setActiveView("patients");
   }
 
   // ── No clinicId → show error ────────────────────────────────────────────────
@@ -64,6 +74,17 @@ export default function App() {
     return <Login clinicId={clinicId} onAuth={handleAuth} />;
   }
 
+  if (activeView === "status-audit" && statusAuditAllowed) {
+    return (
+      <StatusAuditPage
+        clinicId={clinicId}
+        clinicianKey={clinicianKey}
+        onBack={() => setActiveView("patients")}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   // ── Detail view ─────────────────────────────────────────────────────────────
   if (selectedPatientId) {
     return (
@@ -82,6 +103,9 @@ export default function App() {
     <Roster
       clinicId={clinicId}
       clinicianKey={clinicianKey}
+      canAccessStatusAudit={statusAuditAllowed}
+      patientEnrollmentSupported={isPatientEnrollmentSupported()}
+      onOpenStatusAudit={() => setActiveView("status-audit")}
       onSelectPatient={setSelectedPatientId}
       onLogout={handleLogout}
     />

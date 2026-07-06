@@ -1,12 +1,5 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
-import AuditEventOperationsPanel from "./components/AuditEventOperationsPanel.jsx";
-import BackupRestoreEvidencePanel from "./components/BackupRestoreEvidencePanel.jsx";
-import ClinicalGovernanceEvidencePanel from "./components/ClinicalGovernanceEvidencePanel.jsx";
-import MonitoringEventOperationsPanel from "./components/MonitoringEventOperationsPanel.jsx";
-import PilotEnvironmentValidationPanel from "./components/PilotEnvironmentValidationPanel.jsx";
-import PilotGoNoGoPanel from "./components/PilotGoNoGoPanel.jsx";
-import PilotReadyV1ReadinessPanel from "./components/PilotReadyV1ReadinessPanel.jsx";
 import { getPatientAccessErrorMessage } from "./patientAccess.js";
 import {
   fetchCareTeamUpdates,
@@ -16,7 +9,16 @@ import {
 
 const REFRESH_MS = 60_000;
 
-export default function Roster({ clinicId, clinicianKey, onSelectPatient, onLogout }) {
+export default function Roster({
+  clinicId,
+  clinicianKey,
+  onSelectPatient,
+  onLogout,
+  canAccessStatusAudit = false,
+  onOpenStatusAudit,
+  patientEnrollmentSupported = false,
+  onEnrollPatient,
+}) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -142,18 +144,38 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
             {lastUpdated && <> · updated {formatTime(lastUpdated)}</>}
           </div>
         </div>
-        <button className="btn-text" onClick={onLogout}>Sign out</button>
+        <div className="page-actions">
+          {canAccessStatusAudit && (
+            <button
+              className="btn-secondary-small"
+              type="button"
+              onClick={onOpenStatusAudit}
+            >
+              Status/Audit
+            </button>
+          )}
+          <button className="btn-text" onClick={onLogout}>Sign out</button>
+        </div>
       </header>
 
       <div className="page-controls">
-  <input
-    type="search"
-    className="search-input"
-    placeholder="Search by name, patient ID, or subject ID…"
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-  />
-</div>
+        <input
+          type="search"
+          className="search-input"
+          placeholder="Search by name, patient ID, or subject ID…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {patientEnrollmentSupported && (
+          <button
+            className="btn-primary-small"
+            type="button"
+            onClick={onEnrollPatient}
+          >
+            Enroll Patient
+          </button>
+        )}
+      </div>
 
 <div className="roster-status-legend">
   <span>
@@ -179,43 +201,6 @@ const withSessions = filtered.filter((p) => p.latestSessionId).length;
         loading={careTeamUpdatesLoading}
         error={careTeamUpdatesError}
         onMarkReviewed={handleMarkCareTeamUpdateReviewed}
-      />
-
-      <PilotReadyV1ReadinessPanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-      />
-
-      <PilotGoNoGoPanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-      />
-
-      <PilotEnvironmentValidationPanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-      />
-
-      <BackupRestoreEvidencePanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-      />
-
-      <ClinicalGovernanceEvidencePanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-      />
-
-      <MonitoringEventOperationsPanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-        limit={25}
-      />
-
-      <AuditEventOperationsPanel
-        clinicianKey={clinicianKey}
-        clinicId={clinicId}
-        limit={25}
       />
 
       {filtered.length === 0 ? (

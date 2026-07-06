@@ -2,11 +2,24 @@ import React from "react";
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CareTeamUpdatesSection } from "./Roster.jsx";
+import Roster, { CareTeamUpdatesSection } from "./Roster.jsx";
+import { fetchCareTeamUpdates, fetchRoster } from "./api.js";
+
+vi.mock("./api.js", () => ({
+  fetchCareTeamUpdates: vi.fn(),
+  fetchRoster: vi.fn(),
+  markCareTeamUpdateReviewed: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
+
+function mockRosterLoads({ patients = [], updates = [] } = {}) {
+  fetchRoster.mockResolvedValue({ patients, count: patients.length, clinicId: "predicate-pilot" });
+  fetchCareTeamUpdates.mockResolvedValue({ updates, count: updates.length });
+}
 
 describe("CareTeamUpdatesSection", () => {
   it("renders empty state", () => {
@@ -199,5 +212,89 @@ describe("CareTeamUpdatesSection", () => {
     ).toBeInTheDocument();
     expect(container).not.toHaveTextContent("clinician-key");
     expect(container).not.toHaveTextContent("private update payload");
+  });
+});
+
+describe("Roster", () => {
+  it("keeps the default clinician dashboard patient-first without internal status panels", async () => {
+    mockRosterLoads();
+
+    const { container } = render(
+      <Roster
+        clinicId="predicate-pilot"
+        clinicianKey="clinician-key"
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText("No patients enrolled in this clinic yet.")).toBeInTheDocument();
+    expect(container).toHaveTextContent("Ask MILO Care Team Updates");
+    expect(container).not.toHaveTextContent("Pilot-Ready v1 status");
+    expect(container).not.toHaveTextContent("Pilot go/no-go checklist");
+    expect(container).not.toHaveTextContent("Pilot environment validation");
+    expect(container).not.toHaveTextContent("Backup Restore Evidence");
+    expect(container).not.toHaveTextContent("Clinical Governance Evidence");
+    expect(container).not.toHaveTextContent("Internal Monitoring Events");
+    expect(container).not.toHaveTextContent("Internal Audit Events");
+    expect(screen.queryByRole("button", { name: "Status/Audit" })).not.toBeInTheDocument();
+  });
+
+  it("shows Status/Audit navigation only for internal users", async () => {
+    const onOpenStatusAudit = vi.fn();
+    mockRosterLoads();
+
+    render(
+      <Roster
+        clinicId="predicate-pilot"
+        clinicianKey="clinician-key"
+        canAccessStatusAudit
+        onOpenStatusAudit={onOpenStatusAudit}
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    const button = await screen.findByRole("button", { name: "Status/Audit" });
+    fireEvent.click(button);
+
+    expect(onOpenStatusAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show Enroll Patient when protected enrollment is unsupported", async () => {
+    mockRosterLoads();
+
+    render(
+      <Roster
+        clinicId="predicate-pilot"
+        clinicianKey="clinician-key"
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText("No patients enrolled in this clinic yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Enroll Patient" })).not.toBeInTheDocument();
+  });
+
+  it("shows Enroll Patient only when enrollment support is explicitly enabled", async () => {
+    const onEnrollPatient = vi.fn();
+    mockRosterLoads();
+
+    render(
+      <Roster
+        clinicId="predicate-pilot"
+        clinicianKey="clinician-key"
+        patientEnrollmentSupported
+        onEnrollPatient={onEnrollPatient}
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    const button = await screen.findByRole("button", { name: "Enroll Patient" });
+    fireEvent.click(button);
+
+    expect(onEnrollPatient).toHaveBeenCalledTimes(1);
   });
 });

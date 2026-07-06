@@ -1,19 +1,22 @@
 /* ── Clinician Theme (Dark Default) ───────────────────────────────────── */
 
 :root {
-  --bg: #0b0f14;
-  --surface: #111827;
-  --surface-elevated: #1f2937;
+  --bg: #102532;
+  --surface: rgba(255, 255, 255, 0.14);
+  --surface-elevated: rgba(255, 255, 255, 0.22);
 
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #eef6f8;
+  --text-secondary: rgba(238, 246, 248, 0.72);
+  --text-muted: rgba(238, 246, 248, 0.52);
 
-  --border: #2b3545;
+  --border: rgba(255, 255, 255, 0.18);
 
-  --primary: #3dbfee;
-  --success: #16a34a;
-  --danger: #dc2626;
+  --primary: #d6eef6;
+  --success: #8bcf72;
+  --danger: #f47b58;
+  --ink: #102532;
+  --panel-text: #12303d;
+  --panel-muted: #64748b;
 }
 /* ── Reset & base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,8 +25,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(214, 238, 246, 0.30), transparent 28%),
+    linear-gradient(135deg, #102532 0%, #173747 42%, #d8e4ea 145%);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 button { font: inherit; cursor: pointer; border: none; background: none; }
@@ -41,11 +47,13 @@ table { border-collapse: collapse; width: 100%; }
 .login-card {
   width: 100%;
   max-width: 420px;
-  padding: 0 !important;
-
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  padding: 28px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(8, 19, 26, 0.25) !important;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
 
   display: flex;
   flex-direction: column;
@@ -59,15 +67,15 @@ table { border-collapse: collapse; width: 100%; }
   font-size: 28px; font-weight: 700;
   margin: 0 auto 20px;
 }
-.login-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 8px; }
+.login-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 8px; color: var(--text-primary); }
 .login-meta { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 24px; }
 .login-input {
   width: 100%; padding: 12px 14px;
-  border: 1px solid #cbd5e1; border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.26); border-radius: 12px;
   font-size: 15px; outline: none; margin-bottom: 12px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.78);
 }
-.login-input:focus { border-color: #0f172a; }
+.login-input:focus { border-color: rgba(214, 238, 246, 0.88); background: #fff; }
 .login-error {
   background: #fef2f2; color: #991b1b;
   padding: 12px 14px; border-radius: 6px;
@@ -77,8 +85,8 @@ table { border-collapse: collapse; width: 100%; }
 }
 .login-btn {
   width: 100%; padding: 12px;
-  background: #0f172a; color: #fff;
-  border-radius: 8px; font-size: 15px; font-weight: 600;
+  background: #d6eef6; color: #102532;
+  border-radius: 12px; font-size: 15px; font-weight: 700;
 }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -87,52 +95,77 @@ table { border-collapse: collapse; width: 100%; }
   width: 100vw;
   max-width: 100vw;
   margin: 0;
-  padding: 24px 32px 60px;
+  padding: 28px 32px 60px;
   box-sizing: border-box;
   overflow-x: hidden;
 }
 .page-loading {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding-bottom: 16px;
+  padding: 18px 20px;
   margin-bottom: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 18px 70px rgba(8, 19, 26, 0.18);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
-.page-title { font-size: 22px; font-weight: 600; }
-.page-sub { font-size: 13px; color: #64748b; margin-top: 4px; }
-.page-controls { margin-bottom: 16px; }
+.page-title { font-size: 24px; font-weight: 650; color: var(--text-primary); letter-spacing: 0; }
+.page-sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.page-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .btn-text {
-  font-size: 14px; color: #475569;
-  padding: 6px 10px; border-radius: 6px;
+  font-size: 14px; color: var(--text-primary);
+  padding: 8px 12px; border-radius: 10px;
 }
-.btn-text:hover { color: #0f172a; background: #f1f5f9; }
+.btn-text:hover { color: #102532; background: rgba(255, 255, 255, 0.72); }
 
 .btn-secondary-small {
   font-size: 13px;
-  color: #0f172a;
-  padding: 6px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
+  color: #102532;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.74);
 }
-.btn-secondary-small:hover { background: #f8fafc; }
+.btn-secondary-small:hover { background: #fff; }
 .btn-secondary-small:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary-small {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #d6eef6;
+  color: #102532;
+  font-size: 13px;
+  font-weight: 800;
+}
 
 .search-input {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 12px;
   font-size: 14px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.80);
   outline: none;
 }
-.search-input:focus { border-color: #0f172a; }
+.search-input:focus { border-color: rgba(214, 238, 246, 0.88); background: #fff; }
 
 .banner-error {
   background: #fef2f2; color: #991b1b;
@@ -142,12 +175,12 @@ table { border-collapse: collapse; width: 100%; }
 }
 
 .empty-state {
-  background: #fff;
-  border: 1px dashed #cbd5e1;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px dashed rgba(255, 255, 255, 0.46);
+  border-radius: 16px;
   padding: 40px 20px;
   text-align: center;
-  color: #64748b;
+  color: var(--panel-muted);
 }
 .empty-state-small {
   color: #94a3b8;
@@ -161,10 +194,13 @@ table { border-collapse: collapse; width: 100%; }
 /* ── Patient list (roster) ────────────────────────────────────────────── */
 .patient-list {
   display: flex; flex-direction: column;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 20px 70px rgba(8, 19, 26, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .care-team-updates-section {
@@ -172,10 +208,13 @@ table { border-collapse: collapse; width: 100%; }
 }
 
 .care-team-updates-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 16px;
   padding: 18px;
+  box-shadow: 0 18px 60px rgba(8, 19, 26, 0.14);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .care-team-updates-list {
@@ -184,10 +223,10 @@ table { border-collapse: collapse; width: 100%; }
 }
 
 .care-team-update {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid rgba(16, 37, 50, 0.10);
+  border-radius: 12px;
   padding: 16px;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.64);
 }
 
 .care-team-update-header {
@@ -2950,4 +2989,114 @@ body,
   border-color: rgba(45, 212, 191, 0.4);
   color: #f8fafc;
   transform: translateY(-1px);
+}
+
+/* ── Patient-first dashboard polish ───────────────────────────────────── */
+.page > .care-team-updates-section,
+.page > .patient-list,
+.page > .empty-state,
+.page > .roster-status-legend {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-header,
+.page-controls {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-controls {
+  margin-bottom: 16px;
+}
+
+.detail-section-title {
+  color: rgba(238, 246, 248, 0.74) !important;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.patient-list,
+.care-team-updates-card,
+.detail-card,
+.detail-header-card,
+.pilot-readiness-card,
+.pilot-go-no-go-card,
+.pilot-environment-card,
+.backup-restore-card,
+.clinical-governance-card,
+.monitoring-events-card,
+.audit-events-card {
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 70px rgba(8, 19, 26, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.patient-row {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(16, 37, 50, 0.10) !important;
+}
+
+.patient-row:hover {
+  background: rgba(214, 238, 246, 0.34) !important;
+}
+
+.patient-row-name,
+.patient-row-session-time,
+.care-team-update-patient {
+  color: #102532 !important;
+}
+
+.patient-row-meta,
+.patient-row-entity-count,
+.care-team-update-meta,
+.care-team-update-status {
+  color: #667985 !important;
+}
+
+.roster-status-legend {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(16, 37, 50, 0.56) !important;
+  border-radius: 14px !important;
+  color: rgba(238, 246, 248, 0.74) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.roster-status-legend strong {
+  color: #eef6f8 !important;
+}
+
+.operations-note {
+  max-width: 1180px;
+  margin: 0 auto 18px;
+  padding: 13px 16px;
+  border: 1px solid rgba(214, 238, 246, 0.26);
+  border-radius: 14px;
+  background: rgba(214, 238, 246, 0.14);
+  color: rgba(238, 246, 248, 0.78);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 16px 14px 44px;
+  }
+
+  .page-header,
+  .page-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-actions {
+    justify-content: flex-start;
+  }
 }
