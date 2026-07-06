@@ -8,7 +8,6 @@ import StatusAuditPage from "./components/StatusAuditPage.jsx";
 import {
   canAccessStatusAudit,
   getConfiguredClinicianRole,
-  isPatientEnrollmentSupported,
 } from "./clinicianAccess.js";
 
 const STORAGE_KEY = "dex.clinician.key";
@@ -55,7 +54,7 @@ export default function App() {
       <div className="login-wrap">
         <div className="login-card">
           <div className="login-logo">D</div>
-          <h1 className="login-title">Dex Clinician</h1>
+          <h1 className="login-title">OpenDx™ Signal Intelligence</h1>
           <div className="login-error">
             No clinic specified. Open this dashboard using the link your administrator
             provided, which should look like
@@ -104,7 +103,6 @@ export default function App() {
       clinicId={clinicId}
       clinicianKey={clinicianKey}
       canAccessStatusAudit={statusAuditAllowed}
-      patientEnrollmentSupported={isPatientEnrollmentSupported()}
       onOpenStatusAudit={() => setActiveView("status-audit")}
       onSelectPatient={setSelectedPatientId}
       onLogout={handleLogout}

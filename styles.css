@@ -1,7 +1,7 @@
 /* ── Clinician Theme (Dark Default) ───────────────────────────────────── */
 
 :root {
-  --bg: #102532;
+  --bg: #151b23;
   --surface: rgba(255, 255, 255, 0.14);
   --surface-elevated: rgba(255, 255, 255, 0.22);
 
@@ -3103,8 +3103,8 @@ body,
 
 /* ── OpenDx Signal Intelligence command center ────────────────────────── */
 :root {
-  --ci-black: #05070d;
-  --ci-navy: #080b18;
+  --ci-black: #151b23;
+  --ci-navy: #151b23;
   --ci-purple: #120a24;
   --ci-card: rgba(20, 18, 38, 0.92);
   --ci-card-soft: rgba(18, 20, 40, 0.74);
@@ -3123,10 +3123,7 @@ body,
 }
 
 body {
-  background:
-    radial-gradient(circle at 14% 8%, rgba(139, 92, 246, 0.22), transparent 26%),
-    radial-gradient(circle at 82% 18%, rgba(0, 229, 255, 0.13), transparent 24%),
-    linear-gradient(135deg, var(--ci-black), var(--ci-navy) 44%, #120a24 100%) !important;
+  background: #151b23 !important;
   color: var(--ci-text);
 }
 
@@ -3977,4 +3974,128 @@ textarea:focus-visible {
   border-color: rgba(245, 158, 11, 0.30) !important;
   background: rgba(245, 158, 11, 0.08) !important;
   color: #ffd28a !important;
+}
+
+/* ── Final login command-center identity ──────────────────────────────── */
+.login-wrap {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #151b23 !important;
+}
+
+.login-wrap::before,
+.login-wrap::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.login-wrap::before {
+  background-image:
+    radial-gradient(circle, rgba(0, 229, 255, 0.46) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(139, 92, 246, 0.38) 0 1px, transparent 1.5px),
+    linear-gradient(115deg, transparent 0 42%, rgba(0, 229, 255, 0.10) 42.2% 42.7%, transparent 43% 100%),
+    linear-gradient(35deg, transparent 0 56%, rgba(255, 61, 154, 0.08) 56.2% 56.7%, transparent 57% 100%);
+  background-position:
+    0 0,
+    36px 42px,
+    0 0,
+    0 0;
+  background-size:
+    92px 92px,
+    128px 128px,
+    260px 260px,
+    340px 340px;
+  opacity: 0.55;
+  animation: loginNetworkDrift 52s linear infinite;
+}
+
+.login-wrap::after {
+  z-index: -1;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(0, 229, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 70% 62%, rgba(139, 92, 246, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(21, 27, 35, 0.48), #151b23 82%);
+}
+
+@keyframes loginNetworkDrift {
+  from {
+    transform: translate3d(0, 0, 0);
+    background-position:
+      0 0,
+      36px 42px,
+      0 0,
+      0 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    background-position:
+      92px 92px,
+      -92px 170px,
+      260px 260px,
+      -340px 340px;
+  }
+}
+
+.login-wrap .login-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 30px !important;
+  border: 1px solid rgba(0, 229, 255, 0.22) !important;
+  border-radius: 18px !important;
+  background: rgba(20, 18, 38, 0.76) !important;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.login-wrap .login-logo-image {
+  width: 190px;
+  margin-bottom: 22px !important;
+}
+
+.login-wrap .login-title {
+  color: #f5f7fb !important;
+  font-size: 24px;
+  letter-spacing: 0;
+  margin-bottom: 24px;
+}
+
+.login-wrap .form-label {
+  width: 100%;
+  color: #a7b0c0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+
+.login-wrap .login-input {
+  border-color: rgba(0, 229, 255, 0.24) !important;
+  background: rgba(5, 7, 13, 0.62) !important;
+  color: #f5f7fb !important;
+}
+
+.login-wrap .login-input:focus {
+  border-color: rgba(0, 229, 255, 0.70) !important;
+  background: rgba(5, 7, 13, 0.82) !important;
+}
+
+.login-wrap .login-btn {
+  border: 1px solid rgba(0, 229, 255, 0.46);
+  background: rgba(0, 229, 255, 0.14) !important;
+  color: #f5f7fb !important;
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-wrap::before {
+    animation: none;
+  }
 }

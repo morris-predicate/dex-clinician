@@ -16,8 +16,6 @@ export default function Roster({
   onLogout,
   canAccessStatusAudit = false,
   onOpenStatusAudit,
-  patientEnrollmentSupported = false,
-  onEnrollPatient,
 }) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -244,15 +242,6 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          {patientEnrollmentSupported && (
-            <button
-              className="btn-primary-small"
-              type="button"
-              onClick={onEnrollPatient}
-            >
-              Enroll Patient
-            </button>
-          )}
         </div>
 
         <section className="command-kpi-grid" aria-label="Clinical command metrics">
@@ -360,7 +349,7 @@ function IntelligenceRail({
   return (
     <>
       <section className="intel-panel">
-        <div className="detail-section-title">Selected Intelligence</div>
+        <div className="detail-section-title">Selected Patient Summary</div>
         {patient ? (
           <>
             <h2>{patient.name || "Unnamed patient"}</h2>
@@ -431,15 +420,15 @@ function IntelligenceRail({
       </section>
 
       <section className="intel-panel">
-        <div className="detail-section-title">Operations Health</div>
+        <div className="detail-section-title">Patients Requiring Review</div>
         <div className="intel-stat-grid">
           <div>
             <strong>{reviewFirstCount}</strong>
             <span>review_now</span>
           </div>
           <div>
-            <strong>healthy</strong>
-            <span>pilot operations</span>
+            <strong>{patientCount - reviewFirstCount}</strong>
+            <span>follow_up / stable / pending</span>
           </div>
         </div>
       </section>

@@ -13,7 +13,3 @@ export function getConfiguredClinicianRole(env = import.meta.env) {
 export function canAccessStatusAudit(role = getConfiguredClinicianRole()) {
   return INTERNAL_ROLE_PATTERNS.some((pattern) => pattern.test(String(role || "")));
 }
-
-export function isPatientEnrollmentSupported() {
-  return false;
-}

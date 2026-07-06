@@ -1,4 +1,4 @@
-# Dex Clinician Dashboard
+# OpenDx Signal Intelligence Dashboard
 
 The clinician-facing view of patient records. Each clinic accesses via a URL containing their `clinicId`. Server-side tenant isolation prevents one clinic from seeing another's patients even if they share the password.
 

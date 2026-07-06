@@ -261,7 +261,7 @@ describe("Roster", () => {
     expect(onOpenStatusAudit).toHaveBeenCalledTimes(1);
   });
 
-  it("does not show Enroll Patient when protected enrollment is unsupported", async () => {
+  it("does not expose enrollment actions in the clinician triage dashboard", async () => {
     mockRosterLoads();
 
     render(
@@ -275,26 +275,5 @@ describe("Roster", () => {
 
     expect(await screen.findByText("No patients enrolled in this clinic yet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Enroll Patient" })).not.toBeInTheDocument();
-  });
-
-  it("shows Enroll Patient only when enrollment support is explicitly enabled", async () => {
-    const onEnrollPatient = vi.fn();
-    mockRosterLoads();
-
-    render(
-      <Roster
-        clinicId="predicate-pilot"
-        clinicianKey="clinician-key"
-        patientEnrollmentSupported
-        onEnrollPatient={onEnrollPatient}
-        onSelectPatient={vi.fn()}
-        onLogout={vi.fn()}
-      />
-    );
-
-    const button = await screen.findByRole("button", { name: "Enroll Patient" });
-    fireEvent.click(button);
-
-    expect(onEnrollPatient).toHaveBeenCalledTimes(1);
   });
 });

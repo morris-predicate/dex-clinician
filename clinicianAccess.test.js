@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessStatusAudit,
   getConfiguredClinicianRole,
-  isPatientEnrollmentSupported,
 } from "./clinicianAccess.js";
 
 describe("clinician access helpers", () => {
@@ -15,9 +14,5 @@ describe("clinician access helpers", () => {
     expect(canAccessStatusAudit("predicate_admin")).toBe(true);
     expect(canAccessStatusAudit("internal_operations")).toBe(true);
     expect(canAccessStatusAudit("admin")).toBe(true);
-  });
-
-  it("keeps patient enrollment disabled until a protected route exists", () => {
-    expect(isPatientEnrollmentSupported()).toBe(false);
   });
 });

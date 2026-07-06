@@ -44,9 +44,13 @@ export default function Login({ clinicId, onAuth }) {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={handleSubmit}>
-        <img src="/ao-logo.png" alt="Aō" className="login-logo-image" />
+        <img
+          src="/predicate-logo-light.png"
+          alt="Predicate"
+          className="login-logo-image"
+        />
 
-        <h1 className="login-title">Dex Clinician</h1>
+        <h1 className="login-title">OpenDx™ Signal Intelligence</h1>
 
         <label className="form-label">Clinic</label>
         <select
