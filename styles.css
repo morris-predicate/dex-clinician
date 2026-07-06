@@ -3101,7 +3101,7 @@ body,
   }
 }
 
-/* ── Predicate Clinical Intelligence command center ───────────────────── */
+/* ── OpenDx Signal Intelligence command center ────────────────────────── */
 :root {
   --ci-black: #05070d;
   --ci-navy: #080b18;
@@ -3165,17 +3165,12 @@ textarea:focus-visible {
   border-bottom: 1px solid rgba(146, 93, 255, 0.20);
 }
 
-.command-brand-mark {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--ci-border-focus);
-  border-radius: 12px;
-  background: rgba(0, 229, 255, 0.08);
-  color: var(--ci-cyan);
-  font-weight: 900;
-  box-shadow: 0 0 28px rgba(0, 229, 255, 0.16);
+.command-brand-logo {
+  display: block;
+  width: 168px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .command-brand strong {
@@ -3223,6 +3218,19 @@ textarea:focus-visible {
   background: rgba(0, 229, 255, 0.08);
   color: var(--ci-text);
   box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.18);
+}
+
+.command-nav-item.disabled,
+.command-nav-item:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.command-nav-item.disabled:hover,
+.command-nav-item:disabled:hover {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ci-secondary);
 }
 
 .command-nav-item.active span {
@@ -3767,7 +3775,10 @@ textarea:focus-visible {
     grid-template-columns: 84px minmax(0, 1fr);
   }
 
-  .command-brand div:not(.command-brand-mark),
+  .command-brand-logo {
+    width: 44px;
+  }
+
   .command-nav-item {
     font-size: 0;
   }
@@ -3806,7 +3817,10 @@ textarea:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .command-brand div:not(.command-brand-mark),
+  .command-brand-logo {
+    width: 150px;
+  }
+
   .command-nav-item {
     font-size: 13px;
   }
@@ -3827,4 +3841,140 @@ textarea:focus-visible {
   .command-intel-rail {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Patient detail contrast hardening ─────────────────────────────────── */
+.patient-detail-shell {
+  min-height: 100vh;
+}
+
+.patient-detail-main .detail-header-card,
+.patient-detail-main .detail-card,
+.patient-detail-main .temporal-trajectory-card,
+.patient-detail-main .signal-map-card,
+.patient-detail-main .selected-time-snapshot,
+.patient-detail-main .opendx-trace-card,
+.patient-detail-main .ask-milo-session-events-card {
+  border: 1px solid var(--ci-border) !important;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(0, 229, 255, 0.08), transparent 34%),
+    rgba(20, 18, 38, 0.94) !important;
+  color: var(--ci-text) !important;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+.patient-detail-main .detail-name,
+.patient-detail-main .detail-card strong,
+.patient-detail-main .detail-bucket-label,
+.patient-detail-main .selected-time-header strong,
+.patient-detail-main .opendx-trace-title,
+.patient-detail-main .ask-milo-session-event-role,
+.patient-detail-main .pilot-readiness-milestone {
+  color: var(--ci-text) !important;
+}
+
+.patient-detail-main .detail-meta,
+.patient-detail-main .detail-status,
+.patient-detail-main .muted,
+.patient-detail-main .empty-state-small,
+.patient-detail-main .transcript-meta,
+.patient-detail-main .selected-time-subtitle,
+.patient-detail-main .selected-time-voice,
+.patient-detail-main .opendx-trace-meta,
+.patient-detail-main .ask-milo-session-event-meta {
+  color: var(--ci-secondary) !important;
+}
+
+.patient-detail-main .detail-section-title,
+.patient-detail-main .detail-section-title-row .detail-section-title {
+  color: var(--ci-cyan) !important;
+  opacity: 1 !important;
+}
+
+.patient-detail-main .detail-card p,
+.patient-detail-main .detail-card li,
+.patient-detail-main .detail-card td,
+.patient-detail-main .detail-card th,
+.patient-detail-main .detail-card span,
+.patient-detail-main .detail-card div {
+  color: inherit;
+}
+
+.patient-detail-main .detail-card [style*="background: #fff"],
+.patient-detail-main .detail-card [style*="background:#fff"],
+.patient-detail-main .detail-card [style*="background: #f8fafc"],
+.patient-detail-main .detail-card [style*="background:#f8fafc"],
+.patient-detail-main .detail-card [style*="background: #F9FAFB"],
+.patient-detail-main .detail-card [style*="background:#F9FAFB"],
+.patient-detail-main .detail-card [style*="background: #F3F4F6"],
+.patient-detail-main .detail-card [style*="background:#F3F4F6"] {
+  background: rgba(5, 7, 13, 0.42) !important;
+}
+
+.patient-detail-main .detail-card [style*="color: #64748B"],
+.patient-detail-main .detail-card [style*="color:#64748B"],
+.patient-detail-main .detail-card [style*="color: #475569"],
+.patient-detail-main .detail-card [style*="color:#475569"],
+.patient-detail-main .detail-card [style*="color: #334155"],
+.patient-detail-main .detail-card [style*="color:#334155"],
+.patient-detail-main .detail-card [style*="color: rgb(100, 116, 139)"] {
+  color: var(--ci-secondary) !important;
+}
+
+.patient-detail-main .detail-card [style*="color: #0f172a"],
+.patient-detail-main .detail-card [style*="color:#0f172a"],
+.patient-detail-main .detail-card [style*="color: #111827"],
+.patient-detail-main .detail-card [style*="color:#111827"] {
+  color: var(--ci-text) !important;
+}
+
+.patient-detail-main .vitals-table th,
+.patient-detail-main .vitals-table td {
+  border-color: rgba(146, 93, 255, 0.16) !important;
+  color: var(--ci-secondary) !important;
+}
+
+.patient-detail-main .vitals-table th {
+  color: var(--ci-cyan) !important;
+  background: rgba(5, 7, 13, 0.46) !important;
+}
+
+.patient-detail-main .entity-tag,
+.patient-detail-main .selected-time-value,
+.patient-detail-main .temporal-window-card,
+.patient-detail-main .temporal-signal-row,
+.patient-detail-main .signal-lineage-panel-section,
+.patient-detail-main .opendx-trace-artifact,
+.patient-detail-main .ask-milo-session-event {
+  border-color: rgba(146, 93, 255, 0.22) !important;
+  background: rgba(5, 7, 13, 0.38) !important;
+  color: var(--ci-text) !important;
+}
+
+.patient-detail-main .transcript-msg {
+  border: 1px solid rgba(146, 93, 255, 0.20);
+  background: rgba(5, 7, 13, 0.42) !important;
+  color: var(--ci-text) !important;
+}
+
+.patient-detail-main .transcript-msg-patient {
+  border-color: rgba(0, 229, 255, 0.28);
+}
+
+.patient-detail-main .transcript-role {
+  color: var(--ci-cyan) !important;
+}
+
+.patient-detail-main .transcript-content {
+  color: var(--ci-text) !important;
+}
+
+.patient-detail-main .signal-map-unavailable,
+.patient-detail-main .temporal-unavailable,
+.patient-detail-main .clinical-safety-note {
+  border-color: rgba(245, 158, 11, 0.30) !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: #ffd28a !important;
 }

@@ -2015,11 +2015,51 @@ const canShowTemporalTrajectory =
   hasValidTemporalSummary;
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <button className="btn-text" onClick={onBack}>‹ Back to roster</button>
-        <button className="btn-text" onClick={onLogout}>Sign out</button>
-      </header>
+    <div className="command-shell patient-detail-shell">
+      <aside className="command-nav" aria-label="OpenDx Signal Intelligence">
+        <div className="command-brand">
+          <img
+            src="/predicate-logo-light.png"
+            alt="Predicate"
+            className="command-brand-logo"
+          />
+        </div>
+
+        <nav className="command-nav-list">
+          <button type="button" className="command-nav-item" onClick={onBack}>
+            <span />
+            Overview
+          </button>
+          <button type="button" className="command-nav-item" onClick={onBack}>
+            <span />
+            Review Queue
+          </button>
+          <button type="button" className="command-nav-item active">
+            <span />
+            Patient Detail
+          </button>
+        </nav>
+
+        <div className="command-nav-footer">
+          <span>Practice scope</span>
+          <strong>{clinicId}</strong>
+        </div>
+      </aside>
+
+      <main className="page command-main patient-detail-main">
+        <header className="command-topbar">
+          <div>
+            <div className="page-title">Patient Detail</div>
+            <div className="page-sub">
+              OpenDx™ Signal Intelligence · {patient.name || "Unnamed patient"}
+            </div>
+          </div>
+          <div className="command-topbar-actions">
+            <span className="command-status-pill">Patient panel scoped</span>
+            <button className="btn-text" onClick={onBack}>Overview</button>
+            <button className="btn-text" onClick={onLogout}>Sign out</button>
+          </div>
+        </header>
 
       {/* ── Patient header card ──────────────────────────────────────────── */}
       <div className="detail-header-card">
@@ -3914,6 +3954,7 @@ lines.slice(0, 3).forEach((textLine, index) => {
           </div>
         )}
       </section>
+      </main>
     </div>
   );
 }

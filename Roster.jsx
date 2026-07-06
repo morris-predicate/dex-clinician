@@ -9,15 +9,6 @@ import {
 
 const REFRESH_MS = 60_000;
 
-const CLINICAL_NAV_ITEMS = [
-  "Clinical Command",
-  "Patient Intelligence",
-  "Review Queue",
-  "Care-Team Updates",
-  "OpenDx Reasoning",
-  "Interaction Trace",
-];
-
 export default function Roster({
   clinicId,
   clinicianKey,
@@ -36,6 +27,17 @@ export default function Roster({
   const [careTeamUpdates, setCareTeamUpdates] = useState([]);
   const [careTeamUpdatesLoading, setCareTeamUpdatesLoading] = useState(true);
   const [careTeamUpdatesError, setCareTeamUpdatesError] = useState(null);
+
+  function scrollToOverview() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function scrollToReviewQueue() {
+    document.getElementById("review-queue")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
 
   const load = useCallback(async () => {
     try {
@@ -154,26 +156,41 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
 
   return (
     <div className="command-shell">
-      <aside className="command-nav" aria-label="Predicate Clinical Intelligence">
+      <aside className="command-nav" aria-label="OpenDx Signal Intelligence">
         <div className="command-brand">
-          <div className="command-brand-mark">P</div>
-          <div>
-            <strong>Predicate</strong>
-            <span>Clinical Intelligence</span>
-          </div>
+          <img
+            src="/predicate-logo-light.png"
+            alt="Predicate"
+            className="command-brand-logo"
+          />
         </div>
 
         <nav className="command-nav-list">
-          {CLINICAL_NAV_ITEMS.map((item, index) => (
-            <button
-              key={item}
-              type="button"
-              className={index === 0 ? "command-nav-item active" : "command-nav-item"}
-            >
-              <span />
-              {item}
-            </button>
-          ))}
+          <button
+            type="button"
+            className="command-nav-item active"
+            onClick={scrollToOverview}
+          >
+            <span />
+            Overview
+          </button>
+          <button
+            type="button"
+            className="command-nav-item"
+            onClick={scrollToReviewQueue}
+          >
+            <span />
+            Review Queue
+          </button>
+          <button
+            type="button"
+            className="command-nav-item disabled"
+            disabled
+            aria-disabled="true"
+          >
+            <span />
+            Patient Detail
+          </button>
 
           {canAccessStatusAudit && (
             <button
@@ -196,8 +213,7 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
       <main className="page command-main">
         <header className="command-topbar">
           <div>
-            <div className="command-kicker">OpenDx powered review cockpit</div>
-            <div className="page-title">Predicate Clinical Intelligence</div>
+            <div className="page-title">OpenDx™ Signal Intelligence</div>
             <div className="page-sub">
               {patients.length} monitored · {withSessions} with sessions
               {lastUpdated && <> · refreshed {formatTime(lastUpdated)}</>}
@@ -206,7 +222,7 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
 
           <div className="command-topbar-actions">
             <span className="command-status-pill">Pilot-Ready v1</span>
-            <span className="command-status-pill healthy">Operations healthy</span>
+            <span className="command-status-pill healthy">Status: Ready</span>
             {canAccessStatusAudit && (
               <button
                 className="btn-secondary-small"
@@ -252,7 +268,7 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
 
         <div className="command-content-grid">
           <section className="command-primary-stack">
-            <div className="command-module">
+            <div className="command-module" id="review-queue">
               <div className="module-heading-row">
                 <div>
                   <div className="detail-section-title">Review Queue</div>
