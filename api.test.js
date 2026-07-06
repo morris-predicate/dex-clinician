@@ -162,6 +162,25 @@ describe("clinician actor headers", () => {
     expect(global.fetch.mock.calls[0][0]).not.toContain("dashboard-secret");
   });
 
+  it("uses predicate-pilot as the practice header for the pilot roster scope", async () => {
+    const { fetchRoster } = await importApi();
+
+    await fetchRoster({
+      clinicianKey: "dashboard-secret",
+      clinicId: "predicate-pilot",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/clinician/patients?clinicId=predicate-pilot",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "x-clinician-key": "dashboard-secret",
+          "x-practice-id": "predicate-pilot",
+        }),
+      })
+    );
+  });
+
   it("posts sanitized backup restore evidence", async () => {
     const { createBackupRestoreEvidence } = await importApi();
 

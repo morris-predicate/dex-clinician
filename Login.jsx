@@ -1,22 +1,18 @@
 import React from "react";
 import { useState } from "react";
 import { fetchRoster } from "./api.js";
-
-const CLINICS = [
-  { value: "alpha-v1", label: "Alpha v1" },
-  { value: "production-v1", label: "Production / Demo" },
-];
+import { CLINICS, normalizeClinicId } from "./clinicConfig.js";
 
 export default function Login({ clinicId, onAuth }) {
   const [password, setPassword] = useState("");
   const [selectedClinic, setSelectedClinic] = useState(
-    clinicId || "alpha-v1"
+    normalizeClinicId(clinicId)
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
   function handleClinicChange(e) {
-    const nextClinic = e.target.value;
+    const nextClinic = normalizeClinicId(e.target.value);
     setSelectedClinic(nextClinic);
 
     const url = new URL(window.location.href);

@@ -3,15 +3,25 @@ import { useEffect, useState } from "react";
 import Login from "./Login.jsx";
 import Roster from "./Roster.jsx";
 import PatientDetail from "./PatientDetail.jsx";
+import { DEFAULT_CLINIC_ID, normalizeClinicId } from "./clinicConfig.js";
 
 const STORAGE_KEY = "dex.clinician.key";
 
 export default function App() {
   // ── Resolve clinicId from URL on first render ───────────────────────────────
   const [clinicId] = useState(() => {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("clinic") || "alpha-v1";
-});
+    const params = new URLSearchParams(window.location.search);
+    const rawClinicId = params.get("clinic") || DEFAULT_CLINIC_ID;
+    const normalizedClinicId = normalizeClinicId(rawClinicId);
+
+    if (normalizedClinicId !== rawClinicId) {
+      params.set("clinic", normalizedClinicId);
+      const nextUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+      window.history.replaceState({}, "", nextUrl);
+    }
+
+    return normalizedClinicId;
+  });
 
   const [clinicianKey, setClinicianKey] = useState(() =>
     sessionStorage.getItem(STORAGE_KEY)
