@@ -1,4 +1,5 @@
-export const DEFAULT_CLINIC_ID = "alpha-v1";
+export const DEFAULT_CLINIC_ID =
+  import.meta.env.VITE_DEFAULT_CLINIC_ID || "alpha-v1";
 export const PILOT_CLINIC_ID = "predicate-pilot";
 
 const LEGACY_CLINIC_ALIASES = {
