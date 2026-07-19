@@ -3323,6 +3323,29 @@ textarea:focus-visible {
   gap: 9px;
 }
 
+.command-topbar-actions .controlled-beta-primary-action {
+  width: auto;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid #8bc8da;
+  background: #d6eef6 !important;
+  color: #102532 !important;
+}
+
+.command-topbar-actions .controlled-beta-primary-action:hover {
+  background: #c1e5f0 !important;
+  border-color: #65b4ca;
+}
+
+.command-topbar-actions .controlled-beta-primary-action:active {
+  background: #aedbe8 !important;
+}
+
+.command-topbar-actions .controlled-beta-primary-action:disabled {
+  color: #475569 !important;
+  opacity: 0.62;
+}
+
 .command-status-pill {
   display: inline-flex;
   align-items: center;

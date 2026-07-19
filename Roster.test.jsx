@@ -216,6 +216,51 @@ describe("CareTeamUpdatesSection", () => {
 });
 
 describe("Roster", () => {
+  it("renders a readable enabled controlled-beta enrollment action", async () => {
+    mockRosterLoads();
+    const onEnrollPatient = vi.fn();
+
+    render(
+      <Roster
+        clinicId="predicate-july20-controlled-beta"
+        clinicianKey="clinician-key"
+        onEnrollPatient={onEnrollPatient}
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    const button = await screen.findByRole("button", { name: "Enroll New Patient" });
+    expect(button).toBeEnabled();
+    expect(button).toHaveClass("controlled-beta-primary-action");
+    fireEvent.click(button);
+    expect(onEnrollPatient).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders an intentional safe state when optional updates fail", async () => {
+    fetchRoster.mockResolvedValue({ patients: [], count: 0 });
+    fetchCareTeamUpdates.mockRejectedValue({
+      status: 401,
+      message: "Unauthorized",
+    });
+
+    const { container } = render(
+      <Roster
+        clinicId="predicate-july20-controlled-beta"
+        clinicianKey="clinician-key"
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        "Ask MILO care-team updates are temporarily unavailable. Patient enrollment and monitoring remain available."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("Unauthorized");
+  });
+
   it("keeps the default clinician dashboard patient-first without internal status panels", async () => {
     mockRosterLoads();
 

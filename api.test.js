@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 beforeEach(() => {
   vi.stubEnv("VITE_PROXY_URL", "https://proxy.test");
+  vi.stubEnv("VITE_CONTROLLED_BETA", "true");
   global.fetch = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
@@ -74,7 +75,7 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/care-team-updates/update-1/review?clinicId=alpha-v1",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review?clinicId=alpha-v1",
       expect.objectContaining({
         method: "POST",
         headers: {
@@ -84,6 +85,44 @@ describe("clinician actor headers", () => {
           "x-practice-id": "practice-456",
         },
       })
+    );
+  });
+
+  it("routes controlled care-team updates through the shared-key staging endpoint", async () => {
+    const { fetchCareTeamUpdates } = await importApi();
+
+    await fetchCareTeamUpdates({
+      clinicianKey: "dashboard-secret",
+      clinicId: "predicate-july20-controlled-beta",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates?clinicId=predicate-july20-controlled-beta",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "x-clinician-key": "dashboard-secret",
+        }),
+      })
+    );
+  });
+
+  it("uses only the controlled patient detail endpoint for beta vitals", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({ vitals: [] }),
+    });
+    const { fetchPatientVitals } = await importApi();
+
+    await fetchPatientVitals({
+      patientId: "patient-123",
+      clinicianKey: "dashboard-secret",
+      clinicId: "predicate-july20-controlled-beta",
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch.mock.calls[0][0]).toBe(
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=predicate-july20-controlled-beta"
     );
   });
 

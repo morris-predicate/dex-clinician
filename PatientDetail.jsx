@@ -1823,6 +1823,11 @@ useEffect(() => {
 
 async function loadFusionSummary() {
   if (!patientId) return;
+  if (import.meta.env.VITE_CONTROLLED_BETA === "true") {
+    setFusionSummary(null);
+    setFusionLoading(false);
+    return;
+  }
 
   setFusionLoading(true);
 
@@ -1851,6 +1856,11 @@ async function loadFusionSummary() {
 
 async function loadTemporalTimeline() {
   if (!patientId) return;
+  if (import.meta.env.VITE_CONTROLLED_BETA === "true") {
+    setTemporalTimeline(null);
+    setTemporalLoading(false);
+    return;
+  }
 
   setTemporalLoading(true);
 

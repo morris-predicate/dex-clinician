@@ -59,10 +59,7 @@ export default function Roster({
       } else {
         setCareTeamUpdates([]);
         setCareTeamUpdatesError(
-          getPatientAccessErrorMessage(
-            careTeamUpdatesResult.reason,
-            "Ask MILO care-team updates are unavailable right now."
-          )
+          "Ask MILO care-team updates are temporarily unavailable. Patient enrollment and monitoring remain available."
         );
       }
 
@@ -220,7 +217,11 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
           </div>
 
           <div className="command-topbar-actions">
-            <button className="login-btn" type="button" onClick={onEnrollPatient}>
+            <button
+              className="login-btn controlled-beta-primary-action"
+              type="button"
+              onClick={onEnrollPatient}
+            >
               Enroll New Patient
             </button>
             <span className="command-status-pill">Pilot-Ready v1</span>

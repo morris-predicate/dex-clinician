@@ -133,9 +133,10 @@ describe("Ask MILO care-team dashboard loop", () => {
 
     expect(
       await screen.findByText(
-        "Access denied for this patient under the current practice context."
+        "Ask MILO care-team updates are temporarily unavailable. Patient enrollment and monitoring remain available."
       )
     ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("Unauthorized");
     expect(container).not.toHaveTextContent("clinician-key");
     expect(container).not.toHaveTextContent("private care-team payload");
   });

@@ -6,6 +6,7 @@
 import { PATIENT_ACCESS_DENIED_MESSAGE } from "./patientAccess.js";
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "";
+const CONTROLLED_BETA = import.meta.env.VITE_CONTROLLED_BETA === "true";
 const DEFAULT_CLINICIAN_ID = "unknown_clinician";
 const DEFAULT_CLINICIAN_ROLE = "clinician";
 const DEFAULT_PRACTICE_ID = "unknown_practice";
@@ -135,25 +136,43 @@ export const fetchTranscript = ({ patientId, ...opts }) =>
   });
 
 export const fetchPatientBaseline = ({ patientId, ...opts }) =>
-  request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, {
-    ...opts,
-    patientScoped: true,
-  });
+  CONTROLLED_BETA
+    ? Promise.resolve({
+        status: "not_available",
+        patientId,
+        message: "No baseline data yet",
+      })
+    : request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, {
+        ...opts,
+        patientScoped: true,
+      });
 
-export const fetchPatientSignals = ({ patientId, ...opts }) =>
-  request(`/api/clinician/patients/${encodeURIComponent(patientId)}/signals`, {
+export const fetchPatientSignals = async ({ patientId, ...opts }) => {
+  if (CONTROLLED_BETA) {
+    const data = await request(
+      `/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`,
+      { ...opts, patientScoped: true }
+    );
+    return {
+      ok: true,
+      signals: data.vitals || [],
+      status: data.vitals?.length ? "available" : "no_monitoring_data",
+    };
+  }
+  return request(`/api/clinician/patients/${encodeURIComponent(patientId)}/signals`, {
     ...opts,
     patientScoped: true,
   });
+};
 
 export const fetchCareTeamUpdates = (opts) =>
-  request("/api/clinician/care-team-updates", {
+  request("/api/controlled-beta/clinician/care-team-updates", {
     ...opts,
     patientScoped: true,
   });
 
 export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
-  request(`/api/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
+  request(`/api/controlled-beta/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
     ...opts,
     method: "POST",
     patientScoped: true,
@@ -358,6 +377,20 @@ export async function fetchPatientVitals({
   practiceId,
   clinicId,
 }) {
+  if (CONTROLLED_BETA) {
+    const data = await request(
+      `/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`,
+      {
+        clinicianKey,
+        clinicianId,
+        clinicianRole,
+        practiceId,
+        clinicId,
+        patientScoped: true,
+      }
+    );
+    return Array.isArray(data?.vitals) ? data.vitals : [];
+  }
   const candidatePaths = [
     patientId
       ? `/api/patients/${encodeURIComponent(patientId)}/vitals`

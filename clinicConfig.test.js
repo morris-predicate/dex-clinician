@@ -24,4 +24,12 @@ it("uses the controlled build-time practice when no clinic is supplied", async (
 
   expect(DEFAULT_CLINIC_ID).toBe("predicate-july20-controlled-beta");
   expect(normalizeConfiguredClinicId()).toBe("predicate-july20-controlled-beta");
+  const { CLINICS: configuredClinics } = await import("./clinicConfig.js");
+  expect(configuredClinics).toContainEqual({
+    value: "predicate-july20-controlled-beta",
+    label: "July 20 Controlled Beta",
+  });
+  expect(
+    configuredClinics.find((clinic) => clinic.label === "Alpha v1")?.value
+  ).toBe("alpha-v1");
 });
