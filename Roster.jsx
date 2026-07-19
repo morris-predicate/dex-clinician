@@ -16,6 +16,7 @@ export default function Roster({
   onLogout,
   canAccessStatusAudit = false,
   onOpenStatusAudit,
+  onEnrollPatient,
 }) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -219,6 +220,9 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
           </div>
 
           <div className="command-topbar-actions">
+            <button className="login-btn" type="button" onClick={onEnrollPatient}>
+              Enroll New Patient
+            </button>
             <span className="command-status-pill">Pilot-Ready v1</span>
             <span className="command-status-pill healthy">Status: Ready</span>
             {canAccessStatusAudit && (
@@ -260,7 +264,7 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
             <div className="command-module" id="review-queue">
               <div className="module-heading-row">
                 <div>
-                  <div className="detail-section-title">Review Queue</div>
+                  <div className="detail-section-title">Monitored Patients</div>
                   <h2>Patient Intelligence</h2>
                 </div>
                 <span className="module-count">{prioritizedPatients.length} profiles</span>

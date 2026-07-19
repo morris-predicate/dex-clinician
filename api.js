@@ -105,6 +105,23 @@ async function request(
 
 export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
 
+export const createPatientEnrollment = ({ payload, ...opts }) =>
+  request("/api/clinician/enrollments", {
+    ...opts,
+    method: "POST",
+    body: payload,
+  });
+
+export const fetchPatientEnrollments = (opts) =>
+  request("/api/clinician/enrollments", opts);
+
+export const regeneratePatientTemporaryPassword = ({ enrollmentId, ...opts }) =>
+  request(`/api/clinician/enrollments/${encodeURIComponent(enrollmentId)}/regenerate-temporary-password`, {
+    ...opts,
+    method: "POST",
+    body: {},
+  });
+
 export const fetchPatient = ({ patientId, ...opts }) =>
   request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, {
     ...opts,

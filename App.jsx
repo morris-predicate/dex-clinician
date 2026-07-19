@@ -3,6 +3,7 @@ import { useState } from "react";
 import Login from "./Login.jsx";
 import Roster from "./Roster.jsx";
 import PatientDetail from "./PatientDetail.jsx";
+import EnrollPatient from "./EnrollPatient.jsx";
 import { DEFAULT_CLINIC_ID, normalizeClinicId } from "./clinicConfig.js";
 import StatusAuditPage from "./components/StatusAuditPage.jsx";
 import {
@@ -84,6 +85,16 @@ export default function App() {
     );
   }
 
+  if (activeView === "enroll") {
+    return (
+      <EnrollPatient
+        clinicId={clinicId}
+        clinicianKey={clinicianKey}
+        onBack={() => setActiveView("patients")}
+      />
+    );
+  }
+
   // ── Detail view ─────────────────────────────────────────────────────────────
   if (selectedPatientId) {
     return (
@@ -104,6 +115,7 @@ export default function App() {
       clinicianKey={clinicianKey}
       canAccessStatusAudit={statusAuditAllowed}
       onOpenStatusAudit={() => setActiveView("status-audit")}
+      onEnrollPatient={() => setActiveView("enroll")}
       onSelectPatient={setSelectedPatientId}
       onLogout={handleLogout}
     />

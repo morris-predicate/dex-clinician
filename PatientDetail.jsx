@@ -2084,6 +2084,24 @@ const canShowTemporalTrajectory =
         </div>
       </div>
 
+      <section className="detail-section" aria-label="Controlled beta identity linkage">
+        <div className="detail-card">
+          <div className="detail-section-title">Enrollment and monitoring</div>
+          <dl>
+            <dt>MRN</dt><dd>{patient.mrn || "Not available"}</dd>
+            <dt>Patient username</dt><dd>{patient.patientUsername || "Pending"}</dd>
+            <dt>Subject UID</dt><dd>{patient.subjectUid || "Not available"}</dd>
+            <dt>Enrollment ID</dt><dd>{patient.enrollmentId || "Not available"}</dd>
+            <dt>Activation</dt><dd>{patient.activationStatus || patient.status || "Pending Activation"}</dd>
+            <dt>Monitoring</dt><dd>{patient.monitoringStatus || "Pending activation"}</dd>
+            <dt>Last activity</dt><dd>{patient.lastActivityAt ? formatDateTime(patient.lastActivityAt) : "No activity yet"}</dd>
+          </dl>
+          {!patient.latestSessionAt && !vitals?.length && (
+            <div className="empty-state-small">No monitoring data yet</div>
+          )}
+        </div>
+      </section>
+
 {/* ── Fusion clinical significance card ───────────────────────── */}
 <section className="detail-section">
   <div className="detail-card care-priority-card">
