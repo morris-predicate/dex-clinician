@@ -103,7 +103,7 @@ async function request(
   return data;
 }
 
-export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
+export const fetchRoster = (opts) => request("/api/controlled-beta/clinician/patients", opts);
 
 export const createPatientEnrollment = ({ payload, ...opts }) =>
   request("/api/clinician/enrollments", {
@@ -123,7 +123,7 @@ export const regeneratePatientTemporaryPassword = ({ enrollmentId, ...opts }) =>
   });
 
 export const fetchPatient = ({ patientId, ...opts }) =>
-  request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, {
+  request(`/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`, {
     ...opts,
     patientScoped: true,
   });

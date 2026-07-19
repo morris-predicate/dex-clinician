@@ -27,7 +27,7 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/patients/patient-123?clinicId=alpha-v1",
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=alpha-v1",
       expect.objectContaining({
         headers: {
           "x-clinician-key": "dashboard-secret",
@@ -171,7 +171,7 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/patients?clinicId=predicate-pilot",
+      "https://proxy.test/api/controlled-beta/clinician/patients?clinicId=predicate-pilot",
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-clinician-key": "dashboard-secret",
