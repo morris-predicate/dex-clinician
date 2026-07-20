@@ -1,6 +1,7 @@
 /*
  * src/lib/api.js — Clinician dashboard API client.
- * All endpoints require both x-clinician-key (auth) and clinicId (scope).
+ * Controlled-beta endpoints receive only the access key from the browser.
+ * Practice and actor authority are derived by the backend runtime.
  */
 
 import { PATIENT_ACCESS_DENIED_MESSAGE } from "./patientAccess.js";
@@ -70,14 +71,16 @@ async function request(
   } = {}
 ) {
   const url = new URL(`${PROXY_URL}${path}`);
-  if (clinicId) url.searchParams.set("clinicId", clinicId);
-  const headers = buildClinicianHeaders({
-    clinicianKey,
-    clinicianId,
-    clinicianRole,
-    practiceId,
-    clinicId,
-  });
+  if (!CONTROLLED_BETA && clinicId) url.searchParams.set("clinicId", clinicId);
+  const headers = CONTROLLED_BETA
+    ? { "x-clinician-key": clinicianKey || "" }
+    : buildClinicianHeaders({
+        clinicianKey,
+        clinicianId,
+        clinicianRole,
+        practiceId,
+        clinicId,
+      });
   if (body !== undefined) headers["content-type"] = "application/json";
 
   const res = await fetch(url.toString(), {

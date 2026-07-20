@@ -90,6 +90,51 @@ table { border-collapse: collapse; width: 100%; }
 }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.enrollment-form {
+  width: 100%;
+  max-width: 840px;
+  margin: 20px auto 0;
+}
+
+.enrollment-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 0 18px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.enrollment-consent-checkbox {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+}
+
+.enrollment-submit:disabled {
+  opacity: 1 !important;
+  background: #b8d7e2 !important;
+  border: 1px solid #7ca9b8 !important;
+  color: #102532 !important;
+  cursor: not-allowed;
+}
+
+.enrollment-submit:not(:disabled) {
+  background: #087b8f !important;
+  border: 1px solid #087b8f !important;
+  color: #fff !important;
+  cursor: pointer;
+}
+
+.enrollment-submit:not(:disabled):hover {
+  background: #056879 !important;
+}
+
+.enrollment-submit:not(:disabled):active {
+  background: #045663 !important;
+}
+
 /* ── Page layout ──────────────────────────────────────────────────────── */
 .page {
   width: 100vw;

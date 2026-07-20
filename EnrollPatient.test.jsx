@@ -22,6 +22,21 @@ function completeForm() {
 }
 
 describe("controlled beta enrollment", () => {
+  it("keeps enrollment disabled until valid required fields and consent are present", () => {
+    render(<EnrollPatient clinicianKey="key" clinicId="practice-a" onBack={() => {}} />);
+    const submit = screen.getByRole("button", { name: "Enroll patient" });
+
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveClass("enrollment-submit");
+    fireEvent.change(screen.getByLabelText("Patient MRN"), { target: { value: "MRN-001" } });
+    fireEvent.change(screen.getByLabelText("Patient email"), { target: { value: "not-an-email" } });
+    expect(submit).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Patient email"), { target: { value: "patient@example.invalid" } });
+    expect(submit).toBeDisabled();
+    fireEvent.click(screen.getByText(/patient is authorized/i));
+    expect(submit).toBeEnabled();
+  });
+
   it("requires the minimum fields and consent and protects against repeat submit", async () => {
     let resolve;
     createPatientEnrollment.mockReturnValue(new Promise((done) => { resolve = done; }));

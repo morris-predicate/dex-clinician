@@ -216,6 +216,26 @@ describe("CareTeamUpdatesSection", () => {
 });
 
 describe("Roster", () => {
+  it("shows the program label without presenting a production practice", async () => {
+    mockRosterLoads();
+    const { container } = render(
+      <Roster
+        clinicId="predicate-july20-controlled-beta"
+        clinicianKey="clinician-key"
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText("MILO Beta Program")).toBeInTheDocument();
+    expect(screen.getByText("Controlled beta environment")).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("Production / Demo");
+    expect(fetchRoster).toHaveBeenCalledWith({
+      clinicianKey: "clinician-key",
+      clinicId: "predicate-july20-controlled-beta",
+    });
+  });
+
   it("renders a readable enabled controlled-beta enrollment action", async () => {
     mockRosterLoads();
     const onEnrollPatient = vi.fn();

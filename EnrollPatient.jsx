@@ -19,10 +19,16 @@ export default function EnrollPatient({ clinicianKey, clinicId, onBack, onComple
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+  const canSubmit =
+    form.mrn.trim().length > 0 &&
+    emailIsValid &&
+    form.consentConfirmed &&
+    !busy;
 
   async function submit(event) {
     event.preventDefault();
-    if (busy) return;
+    if (!canSubmit) return;
     setBusy(true);
     setError("");
     try {
@@ -122,13 +128,13 @@ export default function EnrollPatient({ clinicianKey, clinicId, onBack, onComple
         <label className="form-label" htmlFor="initials">First name or initials (optional)</label>
         <input id="initials" className="login-input" value={form.patientInitials}
           onChange={(e) => setForm({ ...form, patientInitials: e.target.value })} />
-        <label>
-          <input type="checkbox" required checked={form.consentConfirmed}
+        <label className="enrollment-consent">
+          <input className="enrollment-consent-checkbox" type="checkbox" required checked={form.consentConfirmed}
             onChange={(e) => setForm({ ...form, consentConfirmed: e.target.checked })} />
-          The patient is authorized or has consented to receive MILO Beta access.
+          <span>The patient is authorized or has consented to receive MILO Beta access.</span>
         </label>
         {error && <div className="banner-error">{error}</div>}
-        <button className="login-btn" disabled={busy}>
+        <button className="login-btn enrollment-submit" disabled={!canSubmit}>
           {busy ? "Creating patient identity…" : "Enroll patient"}
         </button>
       </form>

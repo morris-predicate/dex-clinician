@@ -15,8 +15,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("clinician actor headers", () => {
-  it("sends practice and actor headers on patient-specific reads", async () => {
+describe("controlled-beta request authority", () => {
+  it("does not send client-selected practice or actor authority on patient reads", async () => {
     const { fetchPatient } = await importApi();
 
     await fetchPatient({
@@ -28,13 +28,10 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=alpha-v1",
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123",
       expect.objectContaining({
         headers: {
           "x-clinician-key": "dashboard-secret",
-          "x-clinician-id": "clinician-123",
-          "x-clinician-role": "reviewing_clinician",
-          "x-practice-id": "alpha-v1",
         },
       })
     );
@@ -62,7 +59,7 @@ describe("clinician actor headers", () => {
     });
   });
 
-  it("sends actor headers with clinician review actions", async () => {
+  it("does not send client-selected practice or actor authority on review actions", async () => {
     const { markCareTeamUpdateReviewed } = await importApi();
 
     await markCareTeamUpdateReviewed({
@@ -75,14 +72,11 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review?clinicId=alpha-v1",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review",
       expect.objectContaining({
         method: "POST",
         headers: {
           "x-clinician-key": "dashboard-secret",
-          "x-clinician-id": "clinician-123",
-          "x-clinician-role": "reviewing_clinician",
-          "x-practice-id": "practice-456",
         },
       })
     );
@@ -97,7 +91,7 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/care-team-updates?clinicId=predicate-july20-controlled-beta",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates",
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-clinician-key": "dashboard-secret",
@@ -122,11 +116,11 @@ describe("clinician actor headers", () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch.mock.calls[0][0]).toBe(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=predicate-july20-controlled-beta"
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123"
     );
   });
 
-  it("uses safe actor defaults when identity is unset", async () => {
+  it("omits browser-derived actor defaults", async () => {
     const { fetchInternalAuditEvents } = await importApi();
 
     await fetchInternalAuditEvents({
@@ -139,15 +133,12 @@ describe("clinician actor headers", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-clinician-key": "dashboard-secret",
-          "x-clinician-id": "unknown_clinician",
-          "x-clinician-role": "clinician",
-          "x-practice-id": "unknown_practice",
         }),
       })
     );
   });
 
-  it("uses env actor identity for protected operations views", async () => {
+  it("does not transmit build-time actor identity for protected operations views", async () => {
     vi.stubEnv("VITE_CLINICIAN_ID", "env-clinician");
     vi.stubEnv("VITE_CLINICIAN_ROLE", "ops_reviewer");
     vi.stubEnv("VITE_PRACTICE_ID", "env-practice");
@@ -165,18 +156,8 @@ describe("clinician actor headers", () => {
     const [, readinessOptions] = global.fetch.mock.calls[0];
     const [, goNoGoOptions] = global.fetch.mock.calls[1];
 
-    expect(readinessOptions.headers).toMatchObject({
-      "x-clinician-key": "dashboard-secret",
-      "x-clinician-id": "env-clinician",
-      "x-clinician-role": "ops_reviewer",
-      "x-practice-id": "env-practice",
-    });
-    expect(goNoGoOptions.headers).toMatchObject({
-      "x-clinician-key": "dashboard-secret",
-      "x-clinician-id": "env-clinician",
-      "x-clinician-role": "ops_reviewer",
-      "x-practice-id": "env-practice",
-    });
+    expect(readinessOptions.headers).toEqual({ "x-clinician-key": "dashboard-secret" });
+    expect(goNoGoOptions.headers).toEqual({ "x-clinician-key": "dashboard-secret" });
   });
 
   it("keeps clinician key separate from actor identity", async () => {
@@ -201,7 +182,7 @@ describe("clinician actor headers", () => {
     expect(global.fetch.mock.calls[0][0]).not.toContain("dashboard-secret");
   });
 
-  it("uses predicate-pilot as the practice header for the pilot roster scope", async () => {
+  it("does not allow the selector value to alter roster authority", async () => {
     const { fetchRoster } = await importApi();
 
     await fetchRoster({
@@ -210,12 +191,11 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/patients?clinicId=predicate-pilot",
+      "https://proxy.test/api/controlled-beta/clinician/patients",
       expect.objectContaining({
-        headers: expect.objectContaining({
+        headers: {
           "x-clinician-key": "dashboard-secret",
-          "x-practice-id": "predicate-pilot",
-        }),
+        },
       })
     );
   });
@@ -230,6 +210,7 @@ describe("clinician actor headers", () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).not.toContain("production-v1");
+    expect(url).not.toContain("clinicId");
     expect(options.headers["x-practice-id"]).not.toBe("production-v1");
   });
 
@@ -249,13 +230,12 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/pilot-ready-v1/backup-restore-evidence?clinicId=alpha-v1",
+      "https://proxy.test/api/pilot-ready-v1/backup-restore-evidence",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
           "content-type": "application/json",
           "x-clinician-key": "dashboard-secret",
-          "x-practice-id": "alpha-v1",
         }),
         body: JSON.stringify({
           evidenceType: "restore_drill",
@@ -284,13 +264,12 @@ describe("clinician actor headers", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/pilot-ready-v1/clinical-governance-evidence?clinicId=alpha-v1",
+      "https://proxy.test/api/pilot-ready-v1/clinical-governance-evidence",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
           "content-type": "application/json",
           "x-clinician-key": "dashboard-secret",
-          "x-practice-id": "alpha-v1",
         }),
         body: JSON.stringify({
           evidenceType: "clinical_review",

@@ -205,8 +205,9 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
         </nav>
 
         <div className="command-nav-footer">
-          <span>Practice scope</span>
-          <strong>{clinicId}</strong>
+          <span>Practice</span>
+          <strong>MILO Beta Program</strong>
+          <small>Controlled beta environment</small>
         </div>
       </aside>
 
