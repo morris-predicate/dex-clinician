@@ -43,4 +43,54 @@ describe("controlled-beta login contexts", () => {
       });
     });
   });
+
+  it("uses the same controlled request contract for Predicate Admin", async () => {
+    fetchRoster.mockResolvedValue({ patients: [] });
+    render(<Login clinicId="predicate-admin" onAuth={vi.fn()} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Access key"), {
+      target: { value: "controlled-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(fetchRoster).toHaveBeenCalledWith({
+        clinicianKey: "controlled-key",
+        clinicId: "predicate-admin",
+      });
+    });
+  });
+
+  it("distinguishes an HTTP authentication rejection from a network failure", async () => {
+    fetchRoster.mockRejectedValueOnce({ status: 401 });
+    const { unmount } = render(<Login clinicId="prerna-health" onAuth={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText("Access key"), {
+      target: { value: "controlled-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Incorrect access key.")).toBeInTheDocument();
+
+    unmount();
+    fetchRoster.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    render(<Login clinicId="prerna-health" onAuth={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText("Access key"), {
+      target: { value: "controlled-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByText("Couldn't reach the server. Please try again.")
+    ).toBeInTheDocument();
+  });
+
+  it("opens the authenticated application after a successful HTTP response", async () => {
+    const onAuth = vi.fn();
+    fetchRoster.mockResolvedValue({ patients: [] });
+    render(<Login clinicId="prerna-health" onAuth={onAuth} />);
+    fireEvent.change(screen.getByPlaceholderText("Access key"), {
+      target: { value: "controlled-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(onAuth).toHaveBeenCalledWith("controlled-key"));
+  });
 });

@@ -16,6 +16,24 @@ afterEach(() => {
 });
 
 describe("controlled-beta request authority", () => {
+  it("uses the controlled API base and roster path without client authority", async () => {
+    vi.stubEnv("VITE_PROXY_URL", "https://api-beta.predicatelabs.ai");
+    const { fetchRoster } = await importApi();
+
+    await fetchRoster({
+      clinicianKey: "dashboard-secret",
+      clinicId: "prerna-health",
+    });
+
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe(
+      "https://api-beta.predicatelabs.ai/api/controlled-beta/clinician/patients"
+    );
+    expect(options.headers).toEqual({
+      "x-clinician-key": "dashboard-secret",
+    });
+  });
+
   it("does not send client-selected practice or actor authority on patient reads", async () => {
     const { fetchPatient } = await importApi();
 
