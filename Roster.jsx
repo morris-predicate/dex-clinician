@@ -55,7 +55,11 @@ export default function Roster({
 
       if (careTeamUpdatesResult.status === "fulfilled") {
         setCareTeamUpdates(normalizeCareTeamUpdates(careTeamUpdatesResult.value));
-        setCareTeamUpdatesError(null);
+        setCareTeamUpdatesError(
+          careTeamUpdatesResult.value?.availability === "not_configured"
+            ? "Ask MILO care-team updates are not configured for this controlled-beta environment."
+            : null
+        );
       } else {
         setCareTeamUpdates([]);
         setCareTeamUpdatesError(

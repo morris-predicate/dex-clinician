@@ -261,6 +261,31 @@ describe("Roster", () => {
     expect(container).not.toHaveTextContent("Unauthorized");
   });
 
+  it("renders the controlled-beta not-configured state without raw errors", async () => {
+    fetchRoster.mockResolvedValue({ patients: [], count: 0 });
+    fetchCareTeamUpdates.mockResolvedValue({
+      updates: [],
+      count: 0,
+      availability: "not_configured",
+    });
+
+    const { container } = render(
+      <Roster
+        clinicId="predicate-july20-controlled-beta"
+        clinicianKey="clinician-key"
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        "Ask MILO care-team updates are not configured for this controlled-beta environment."
+      )
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("Unauthorized");
+  });
+
   it("keeps the default clinician dashboard patient-first without internal status panels", async () => {
     mockRosterLoads();
 
