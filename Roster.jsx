@@ -6,8 +6,10 @@ import {
   fetchRoster,
   markCareTeamUpdateReviewed,
 } from "./api.js";
+import { isClinicianDemoMode } from "./demoMode.js";
 
 const REFRESH_MS = 60_000;
+const DEMO_REFRESH_MS = 2_000;
 
 export default function Roster({
   clinicId,
@@ -77,7 +79,7 @@ export default function Roster({
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, REFRESH_MS);
+    const interval = setInterval(load, isClinicianDemoMode() ? DEMO_REFRESH_MS : REFRESH_MS);
     return () => clearInterval(interval);
   }, [load]);
 

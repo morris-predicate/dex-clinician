@@ -6,6 +6,7 @@ const main = readFileSync(resolve(process.cwd(), "main.jsx"), "utf8");
 const app = readFileSync(resolve(process.cwd(), "App.jsx"), "utf8");
 const api = readFileSync(resolve(process.cwd(), "api.js"), "utf8");
 const demo = readFileSync(resolve(process.cwd(), "demoMode.js"), "utf8");
+const roster = readFileSync(resolve(process.cwd(), "Roster.jsx"), "utf8");
 
 describe("current clinician UI demo route", () => {
   it("renders the normal App with a demo session only on exact /demo", () => {
@@ -20,5 +21,6 @@ describe("current clinician UI demo route", () => {
     expect(demo).toMatch(/\/api\/demo\/clinician\/patients/);
     expect(demo).toMatch(/!url\.pathname\.startsWith\("\/api\/demo\/"\)/);
     expect(demo).not.toMatch(/Authorization|Bearer|accessToken/);
+    expect(roster).toMatch(/isClinicianDemoMode\(\) \? DEMO_REFRESH_MS : REFRESH_MS/);
   });
 });
