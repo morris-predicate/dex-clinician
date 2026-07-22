@@ -12,7 +12,7 @@ import {
 
 const STORAGE_KEY = "dex.clinician.key";
 
-export default function App() {
+export default function App({ demoMode = false }) {
   // ── Resolve clinicId from URL on first render ───────────────────────────────
   const [clinicId] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -29,7 +29,7 @@ export default function App() {
   });
 
   const [clinicianKey, setClinicianKey] = useState(() =>
-    sessionStorage.getItem(STORAGE_KEY)
+    demoMode ? "synthetic-demo-session" : sessionStorage.getItem(STORAGE_KEY)
   );
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [activeView, setActiveView] = useState("patients");
