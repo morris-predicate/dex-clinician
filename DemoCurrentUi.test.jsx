@@ -15,10 +15,10 @@ describe("current clinician UI demo route", () => {
     expect(main).not.toMatch(/DemoPortal|demo-dex-clinician/);
   });
 
-  it("uses local fabricated records and blocks live protected APIs", () => {
-    expect(api).toMatch(/resolveDemoApiRequest/);
-    expect(demo).toMatch(/Avery Synthetic/);
-    expect(demo).toMatch(/url\.pathname\.startsWith\("\/api\/"\)/);
+  it("uses only the shared synthetic API and blocks live protected APIs", () => {
+    expect(api).toMatch(/resolveClinicianDemoApiPath/);
+    expect(demo).toMatch(/\/api\/demo\/clinician\/patients/);
+    expect(demo).toMatch(/!url\.pathname\.startsWith\("\/api\/demo\/"\)/);
     expect(demo).not.toMatch(/Authorization|Bearer|accessToken/);
   });
 });

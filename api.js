@@ -4,7 +4,7 @@
  */
 
 import { PATIENT_ACCESS_DENIED_MESSAGE } from "./patientAccess.js";
-import { isClinicianDemoMode, resolveDemoApiRequest } from "./demoMode.js";
+import { isClinicianDemoMode, resolveClinicianDemoApiPath } from "./demoMode.js";
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "";
 const DEFAULT_CLINICIAN_ID = "unknown_clinician";
@@ -69,18 +69,17 @@ async function request(
     body,
   } = {}
 ) {
-  if (isClinicianDemoMode()) {
-    return Promise.resolve(resolveDemoApiRequest(path, { method, body }));
-  }
-  const url = new URL(`${PROXY_URL}${path}`);
-  if (clinicId) url.searchParams.set("clinicId", clinicId);
-  const headers = buildClinicianHeaders({
-    clinicianKey,
-    clinicianId,
-    clinicianRole,
-    practiceId,
-    clinicId,
-  });
+  const demoMode = isClinicianDemoMode();
+  const requestPath = demoMode ? resolveClinicianDemoApiPath(path) : path;
+  const url = new URL(`${PROXY_URL}${requestPath}`);
+  if (!demoMode && clinicId) url.searchParams.set("clinicId", clinicId);
+  const headers = demoMode ? {} : buildClinicianHeaders({
+      clinicianKey,
+      clinicianId,
+      clinicianRole,
+      practiceId,
+      clinicId,
+    });
   if (body !== undefined) headers["content-type"] = "application/json";
 
   const res = await fetch(url.toString(), {
