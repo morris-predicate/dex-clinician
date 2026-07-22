@@ -3,7 +3,7 @@ const DEMO_HOST = "demo-dex-clinician.netlify.app";
 export function isIsolatedDemoRuntime({ env = import.meta.env, location = globalThis.location } = {}) {
   const flag = String(env?.VITE_ISOLATED_DEMO || "").toLowerCase() === "true";
   const host = String(location?.hostname || "").toLowerCase();
-  return flag && (host === DEMO_HOST || host === "localhost" || host === "127.0.0.1");
+  return host === DEMO_HOST || (flag && (host === "localhost" || host === "127.0.0.1"));
 }
 
 export function installDemoNetworkGuard(windowObject = globalThis.window) {

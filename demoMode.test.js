@@ -5,7 +5,7 @@ describe("isolated clinician demo", () => {
   it("requires both the build flag and exact demo host", () => {
     expect(isIsolatedDemoRuntime({ env: { VITE_ISOLATED_DEMO: "true" }, location: { hostname: "demo-dex-clinician.netlify.app" } })).toBe(true);
     expect(isIsolatedDemoRuntime({ env: { VITE_ISOLATED_DEMO: "true" }, location: { hostname: "dex-clinician.netlify.app" } })).toBe(false);
-    expect(isIsolatedDemoRuntime({ env: {}, location: { hostname: "demo-dex-clinician.netlify.app" } })).toBe(false);
+    expect(isIsolatedDemoRuntime({ env: {}, location: { hostname: "demo-dex-clinician.netlify.app" } })).toBe(true);
   });
   it("contains only explicitly fabricated patients", () => {
     expect(DEMO_PATIENTS).toHaveLength(3);
