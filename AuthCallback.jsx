@@ -8,7 +8,10 @@ export default function AuthCallback({ onAuthenticated }) {
     const callbackUrl = window.location.href;
     window.history.replaceState(null, "", window.location.pathname);
     completeClinicianAuthentication(callbackUrl)
-      .then(onAuthenticated)
+      .then((token) => {
+        window.history.replaceState(null, "", "/");
+        onAuthenticated(token);
+      })
       .catch(() => setFailed(true));
   }, [onAuthenticated]);
 
