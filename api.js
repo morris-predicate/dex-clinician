@@ -1,59 +1,17 @@
 /*
  * src/lib/api.js — Clinician dashboard API client.
- * Controlled-beta endpoints receive only the access key from the browser.
- * Practice and actor authority are derived by the backend runtime.
+ * Governed clinician endpoints receive only the Cognito access token.
+ * Practice and actor authority are verified by the backend runtime.
  */
 
 import { PATIENT_ACCESS_DENIED_MESSAGE } from "./patientAccess.js";
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "";
-const CONTROLLED_BETA = import.meta.env.VITE_CONTROLLED_BETA === "true";
-const DEFAULT_CLINICIAN_ID = "unknown_clinician";
-const DEFAULT_CLINICIAN_ROLE = "clinician";
-const DEFAULT_PRACTICE_ID = "unknown_practice";
-
-function resolveClinicianActorIdentity({
-  clinicianId,
-  clinicianRole,
-  practiceId,
-  clinicId,
-} = {}) {
-  return {
-    clinicianId:
-      clinicianId ||
-      import.meta.env.VITE_CLINICIAN_ID ||
-      DEFAULT_CLINICIAN_ID,
-    clinicianRole:
-      clinicianRole ||
-      import.meta.env.VITE_CLINICIAN_ROLE ||
-      DEFAULT_CLINICIAN_ROLE,
-    practiceId:
-      practiceId ||
-      import.meta.env.VITE_PRACTICE_ID ||
-      clinicId ||
-      DEFAULT_PRACTICE_ID,
-  };
-}
-
 export function buildClinicianHeaders({
   clinicianKey,
-  clinicianId,
-  clinicianRole,
-  practiceId,
-  clinicId,
 } = {}) {
-  const actor = resolveClinicianActorIdentity({
-    clinicianId,
-    clinicianRole,
-    practiceId,
-    clinicId,
-  });
-
   return {
-    "x-clinician-key": clinicianKey || "",
-    "x-clinician-id": actor.clinicianId,
-    "x-clinician-role": actor.clinicianRole,
-    "x-practice-id": actor.practiceId,
+    Authorization: `Bearer ${clinicianKey || ""}`,
   };
 }
 
@@ -71,16 +29,8 @@ async function request(
   } = {}
 ) {
   const url = new URL(`${PROXY_URL}${path}`);
-  if (!CONTROLLED_BETA && clinicId) url.searchParams.set("clinicId", clinicId);
-  const headers = CONTROLLED_BETA
-    ? { "x-clinician-key": clinicianKey || "" }
-    : buildClinicianHeaders({
-        clinicianKey,
-        clinicianId,
-        clinicianRole,
-        practiceId,
-        clinicId,
-      });
+  if (clinicId) url.searchParams.set("practiceId", clinicId);
+  const headers = buildClinicianHeaders({ clinicianKey });
   if (body !== undefined) headers["content-type"] = "application/json";
 
   const res = await fetch(url.toString(), {
@@ -107,7 +57,7 @@ async function request(
   return data;
 }
 
-export const fetchRoster = (opts) => request("/api/controlled-beta/clinician/patients", opts);
+export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
 
 export const createPatientEnrollment = ({ payload, ...opts }) =>
   request("/api/clinician/enrollments", {
@@ -119,15 +69,15 @@ export const createPatientEnrollment = ({ payload, ...opts }) =>
 export const fetchPatientEnrollments = (opts) =>
   request("/api/clinician/enrollments", opts);
 
-export const regeneratePatientTemporaryPassword = ({ enrollmentId, ...opts }) =>
-  request(`/api/clinician/enrollments/${encodeURIComponent(enrollmentId)}/regenerate-temporary-password`, {
+export const resendPatientEnrollment = ({ enrollmentId, ...opts }) =>
+  request(`/api/clinician/enrollments/${encodeURIComponent(enrollmentId)}/resend`, {
     ...opts,
     method: "POST",
     body: {},
   });
 
 export const fetchPatient = ({ patientId, ...opts }) =>
-  request(`/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`, {
+  request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, {
     ...opts,
     patientScoped: true,
   });
@@ -139,43 +89,26 @@ export const fetchTranscript = ({ patientId, ...opts }) =>
   });
 
 export const fetchPatientBaseline = ({ patientId, ...opts }) =>
-  CONTROLLED_BETA
-    ? Promise.resolve({
-        status: "not_available",
-        patientId,
-        message: "No baseline data yet",
-      })
-    : request(`/api/baseline/patient/${encodeURIComponent(patientId)}`, {
-        ...opts,
-        patientScoped: true,
-      });
+  Promise.resolve({
+    status: "not_available",
+    patientId,
+    message: "No baseline data yet",
+  });
 
-export const fetchPatientSignals = async ({ patientId, ...opts }) => {
-  if (CONTROLLED_BETA) {
-    const data = await request(
-      `/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`,
-      { ...opts, patientScoped: true }
-    );
-    return {
-      ok: true,
-      signals: data.vitals || [],
-      status: data.vitals?.length ? "available" : "no_monitoring_data",
-    };
-  }
-  return request(`/api/clinician/patients/${encodeURIComponent(patientId)}/signals`, {
+export const fetchPatientSignals = ({ patientId, ...opts }) =>
+  request(`/api/clinician/patients/${encodeURIComponent(patientId)}/signals`, {
     ...opts,
     patientScoped: true,
   });
-};
 
 export const fetchCareTeamUpdates = (opts) =>
-  request("/api/controlled-beta/clinician/care-team-updates", {
+  request("/api/clinician/care-team-updates", {
     ...opts,
     patientScoped: true,
   });
 
 export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
-  request(`/api/controlled-beta/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
+  request(`/api/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
     ...opts,
     method: "POST",
     patientScoped: true,
@@ -380,20 +313,6 @@ export async function fetchPatientVitals({
   practiceId,
   clinicId,
 }) {
-  if (CONTROLLED_BETA) {
-    const data = await request(
-      `/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`,
-      {
-        clinicianKey,
-        clinicianId,
-        clinicianRole,
-        practiceId,
-        clinicId,
-        patientScoped: true,
-      }
-    );
-    return Array.isArray(data?.vitals) ? data.vitals : [];
-  }
   const candidatePaths = [
     patientId
       ? `/api/patients/${encodeURIComponent(patientId)}/vitals`

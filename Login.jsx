@@ -1,49 +1,32 @@
 import React from "react";
 import { useState } from "react";
-import { fetchRoster } from "./api.js";
-import { CLINICS, normalizeClinicId } from "./clinicConfig.js";
+import {
+  beginClinicianAuthentication,
+  resolveClinicianCognitoConfig,
+} from "./clinicianCognito.js";
 
-export default function Login({ clinicId, onAuth }) {
-  const [password, setPassword] = useState("");
-  const [selectedClinic, setSelectedClinic] = useState(
-    normalizeClinicId(clinicId)
-  );
+export default function Login({
+  navigateTo = (url) => window.location.assign(url),
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const status = resolveClinicianCognitoConfig();
 
-  function handleClinicChange(e) {
-    const nextClinic = normalizeClinicId(e.target.value);
-    setSelectedClinic(nextClinic);
-
-    const url = new URL(window.location.href);
-    url.searchParams.set("clinic", nextClinic);
-    window.history.replaceState({}, "", url.toString());
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!password.trim() || busy) return;
+  async function handleSubmit() {
+    if (busy || !status.available) return;
     setBusy(true);
     setError(null);
-
     try {
-      await fetchRoster({
-        clinicianKey: password.trim(),
-        clinicId: selectedClinic,
-      });
-
-      onAuth(password.trim());
-    } catch (err) {
-      if (err.status === 401) setError("Incorrect access key.");
-      else if (err.status === 403) setError("Access denied for this clinic.");
-      else setError("Couldn't reach the server. Please try again.");
+      navigateTo(await beginClinicianAuthentication());
+    } catch {
+      setError("Secure clinician sign-in is temporarily unavailable.");
       setBusy(false);
     }
   }
 
   return (
     <div className="login-wrap">
-      <form className="login-card" onSubmit={handleSubmit}>
+      <div className="login-card">
         <img
           src="/predicate-logo-light.png"
           alt="Predicate"
@@ -52,41 +35,20 @@ export default function Login({ clinicId, onAuth }) {
 
         <h1 className="login-title">OpenDx™ Signal Intelligence</h1>
 
-        <label className="form-label">Clinic</label>
-        <select
-          className="login-input"
-          value={selectedClinic}
-          onChange={handleClinicChange}
-          disabled={busy}
-        >
-          {CLINICS.map((clinic) => (
-            <option key={clinic.value} value={clinic.value}>
-              {clinic.label}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="password"
-          className="login-input"
-          placeholder="Access key"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoFocus
-          autoComplete="off"
-          disabled={busy}
-        />
-
+        <p className="login-meta">Use your approved clinician account and software-token MFA.</p>
+        {!status.available && (
+          <div className="login-error">Secure clinician sign-in is not configured on this build.</div>
+        )}
         {error && <div className="login-error">{error}</div>}
-
         <button
-          type="submit"
+          type="button"
           className="login-btn"
-          disabled={!password.trim() || busy}
+          disabled={!status.available || busy}
+          onClick={handleSubmit}
         >
-          {busy ? "Verifying…" : "Continue"}
+          {busy ? "Opening secure sign-in…" : "Continue securely"}
         </button>
-      </form>
+      </div>
     </div>
   );
 }

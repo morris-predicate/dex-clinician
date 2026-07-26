@@ -1,29 +1,36 @@
 import React, { useState } from "react";
-import { createPatientEnrollment, regeneratePatientTemporaryPassword } from "./api.js";
+import { createPatientEnrollment, resendPatientEnrollment } from "./api.js";
 
 const LOGIN_URL = "https://dex-pwa.netlify.app";
 
-function instructions(result) {
+function instructions() {
   return [
     "Welcome to the MILO Beta Program.",
-    `Open ${result.loginUrl || LOGIN_URL}`,
-    `Username: ${result.enrollment.patientUsername}`,
-    `Temporary password: ${result.temporaryPassword}`,
-    "Sign in and choose a new password when prompted. Patient MFA is not required.",
-    "This temporary credential expires. Contact your MILO clinician if it is lost or expired.",
+    `Open ${LOGIN_URL}`,
+    "Enter the enrollment code from your MILO email.",
+    "Then complete the secure Cognito password and software-token MFA steps.",
+    "The enrollment code expires. Contact your MILO clinician if it is lost or expired.",
   ].join("\n");
 }
 
 export default function EnrollPatient({ clinicianKey, clinicId, onBack, onComplete }) {
-  const [form, setForm] = useState({ mrn: "", email: "", patientInitials: "", consentConfirmed: false });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    emailConfirmation: "",
+    electronicContactAuthorized: false,
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
   const canSubmit =
-    form.mrn.trim().length > 0 &&
+    form.firstName.trim().length > 0 &&
+    form.lastName.trim().length > 0 &&
     emailIsValid &&
-    form.consentConfirmed &&
+    form.email === form.emailConfirmation &&
+    form.electronicContactAuthorized &&
     !busy;
 
   async function submit(event) {
@@ -50,16 +57,16 @@ export default function EnrollPatient({ clinicianKey, clinicId, onBack, onComple
     await navigator.clipboard.writeText(value);
   }
 
-  async function recover() {
+  async function resend() {
     setBusy(true);
     setError("");
     try {
-      const recovered = await regeneratePatientTemporaryPassword({
+      const recovered = await resendPatientEnrollment({
         enrollmentId: result.enrollment.enrollmentId,
         clinicianKey,
         clinicId,
       });
-      setResult({ ...recovered, idempotent: false });
+      setResult(recovered);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -77,36 +84,27 @@ export default function EnrollPatient({ clinicianKey, clinicId, onBack, onComple
           {result.idempotent ? (
             <>
               <div className="banner-error">
-                This patient was already enrolled. No new identity or temporary password was created.
+                This exact enrollment already exists. No duplicate identity or invitation was created.
               </div>
-              <button type="button" disabled={busy} onClick={recover}>
-                {busy ? "Regenerating…" : "Regenerate temporary password"}
+              <button type="button" disabled={busy} onClick={resend}>
+                {busy ? "Resending…" : "Resend governed invitation"}
               </button>
             </>
           ) : (
             <div className="banner-warning">
-              One-time secret: copy the temporary password now. It will disappear after refresh or navigation.
-              Send it only through the practice’s approved patient communication channel.
+              Cognito and MILO enrollment instructions are sent directly through the approved email channel.
+              No password or enrollment code is displayed in the dashboard.
             </div>
           )}
           <dl>
-            <dt>MRN</dt><dd>{enrollment.mrn}</dd>
-            <dt>Username</dt><dd>{enrollment.patientUsername || "Pending"}</dd>
-            <dt>Subject UID</dt><dd>{enrollment.subjectUid}</dd>
-            <dt>Invitation</dt><dd>{enrollment.invitationStatus}</dd>
+            <dt>Enrollment ID</dt><dd>{enrollment.enrollmentId}</dd>
+            <dt>Status</dt><dd>{enrollment.status}</dd>
+            <dt>Email delivery</dt><dd>{enrollment.emailDeliveryState}</dd>
           </dl>
-          {!result.idempotent && result.temporaryPassword && (
-            <>
-              <label className="form-label">Temporary password</label>
-              <input className="login-input" readOnly value={result.temporaryPassword} />
-              <div className="command-topbar-actions">
-                <button type="button" onClick={() => copy(enrollment.patientUsername)}>Copy username</button>
-                <button type="button" onClick={() => copy(result.temporaryPassword)}>Copy temporary password</button>
-                <button type="button" onClick={() => copy(result.loginUrl || LOGIN_URL)}>Copy login URL</button>
-                <button type="button" onClick={() => copy(instructions(result))}>Copy complete patient instructions</button>
-              </div>
-            </>
-          )}
+          <div className="command-topbar-actions">
+            <button type="button" onClick={() => copy(LOGIN_URL)}>Copy patient login URL</button>
+            <button type="button" onClick={() => copy(instructions())}>Copy patient instructions</button>
+          </div>
           <button className="login-btn" type="button" onClick={onBack}>Return to dashboard</button>
         </section>
       </main>
@@ -118,19 +116,22 @@ export default function EnrollPatient({ clinicianKey, clinicId, onBack, onComple
       <button className="btn-text" type="button" onClick={onBack}>← Monitored Patients</button>
       <form className="command-module enrollment-form" onSubmit={submit}>
         <h1>Enroll New Patient</h1>
-        <p>Controlled MILO Beta enrollment. The MRN is scoped to this practice.</p>
-        <label className="form-label" htmlFor="mrn">Patient MRN</label>
-        <input id="mrn" className="login-input" required value={form.mrn}
-          onChange={(e) => setForm({ ...form, mrn: e.target.value })} />
+        <p>Controlled MILO Beta enrollment. Identity and practice authority are verified by the server.</p>
+        <label className="form-label" htmlFor="first-name">Patient first name</label>
+        <input id="first-name" className="login-input" required value={form.firstName}
+          onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+        <label className="form-label" htmlFor="last-name">Patient last name</label>
+        <input id="last-name" className="login-input" required value={form.lastName}
+          onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
         <label className="form-label" htmlFor="email">Patient email</label>
         <input id="email" type="email" className="login-input" required value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value.trim() })} />
-        <label className="form-label" htmlFor="initials">First name or initials (optional)</label>
-        <input id="initials" className="login-input" value={form.patientInitials}
-          onChange={(e) => setForm({ ...form, patientInitials: e.target.value })} />
+        <label className="form-label" htmlFor="email-confirmation">Confirm patient email</label>
+        <input id="email-confirmation" type="email" className="login-input" required value={form.emailConfirmation}
+          onChange={(e) => setForm({ ...form, emailConfirmation: e.target.value.trim() })} />
         <label className="enrollment-consent">
-          <input className="enrollment-consent-checkbox" type="checkbox" required checked={form.consentConfirmed}
-            onChange={(e) => setForm({ ...form, consentConfirmed: e.target.checked })} />
+          <input className="enrollment-consent-checkbox" type="checkbox" required checked={form.electronicContactAuthorized}
+            onChange={(e) => setForm({ ...form, electronicContactAuthorized: e.target.checked })} />
           <span>The patient is authorized or has consented to receive MILO Beta access.</span>
         </label>
         {error && <div className="banner-error">{error}</div>}

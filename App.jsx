@@ -1,6 +1,7 @@
 import React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Login from "./Login.jsx";
+import AuthCallback from "./AuthCallback.jsx";
 import Roster from "./Roster.jsx";
 import PatientDetail from "./PatientDetail.jsx";
 import EnrollPatient from "./EnrollPatient.jsx";
@@ -10,8 +11,10 @@ import {
   canAccessStatusAudit,
   getConfiguredClinicianRole,
 } from "./clinicianAccess.js";
-
-const STORAGE_KEY = "dex.clinician.key";
+import {
+  clearClinicianSession,
+  getClinicianAccessToken,
+} from "./clinicianCognito.js";
 
 export default function App() {
   // ── Resolve clinicId from URL on first render ───────────────────────────────
@@ -29,22 +32,17 @@ export default function App() {
     return normalizedClinicId;
   });
 
-  const [clinicianKey, setClinicianKey] = useState(() =>
-    sessionStorage.getItem(STORAGE_KEY)
-  );
+  const [accessToken, setAccessToken] = useState(getClinicianAccessToken);
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [activeView, setActiveView] = useState("patients");
   const clinicianRole = getConfiguredClinicianRole();
   const statusAuditAllowed = canAccessStatusAudit(clinicianRole);
 
-  function handleAuth(key) {
-    sessionStorage.setItem(STORAGE_KEY, key);
-    setClinicianKey(key);
-  }
+  const handleAuth = useCallback((token) => setAccessToken(token), []);
 
   function handleLogout() {
-    sessionStorage.removeItem(STORAGE_KEY);
-    setClinicianKey(null);
+    clearClinicianSession();
+    setAccessToken("");
     setSelectedPatientId(null);
     setActiveView("patients");
   }
@@ -69,16 +67,20 @@ export default function App() {
     );
   }
 
-  // ── Not authenticated → login screen ────────────────────────────────────────
-  if (!clinicianKey) {
-    return <Login clinicId={clinicId} onAuth={handleAuth} />;
+  if (window.location.pathname === "/auth/callback") {
+    return <AuthCallback onAuthenticated={handleAuth} />;
+  }
+
+  // ── Not authenticated → Cognito Managed Login ───────────────────────────────
+  if (!accessToken) {
+    return <Login />;
   }
 
   if (activeView === "status-audit" && statusAuditAllowed) {
     return (
       <StatusAuditPage
         clinicId={clinicId}
-        clinicianKey={clinicianKey}
+        clinicianKey={accessToken}
         onBack={() => setActiveView("patients")}
         onLogout={handleLogout}
       />
@@ -89,7 +91,7 @@ export default function App() {
     return (
       <EnrollPatient
         clinicId={clinicId}
-        clinicianKey={clinicianKey}
+        clinicianKey={accessToken}
         onBack={() => setActiveView("patients")}
       />
     );
@@ -101,7 +103,7 @@ export default function App() {
       <PatientDetail
         patientId={selectedPatientId}
         clinicId={clinicId}
-        clinicianKey={clinicianKey}
+        clinicianKey={accessToken}
         onBack={() => setSelectedPatientId(null)}
         onLogout={handleLogout}
       />
@@ -112,7 +114,7 @@ export default function App() {
   return (
     <Roster
       clinicId={clinicId}
-      clinicianKey={clinicianKey}
+      clinicianKey={accessToken}
       canAccessStatusAudit={statusAuditAllowed}
       onOpenStatusAudit={() => setActiveView("status-audit")}
       onEnrollPatient={() => setActiveView("enroll")}

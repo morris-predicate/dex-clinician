@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 beforeEach(() => {
-  vi.stubEnv("VITE_PROXY_URL", "https://proxy.test");
-  vi.stubEnv("VITE_CONTROLLED_BETA", "true");
+  vi.stubEnv("VITE_PROXY_URL", "https://api-beta.predicatelabs.ai");
   global.fetch = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
-    json: vi.fn().mockResolvedValue({ ok: true }),
+    json: vi.fn().mockResolvedValue({ ok: true, patients: [] }),
   });
 });
 
@@ -15,61 +14,67 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("controlled-beta request authority", () => {
-  it("uses the controlled API base and roster path without client authority", async () => {
-    vi.stubEnv("VITE_PROXY_URL", "https://api-beta.predicatelabs.ai");
+describe("governed clinician request authority", () => {
+  it("uses the governed roster route with a Cognito bearer token", async () => {
     const { fetchRoster } = await importApi();
-
-    await fetchRoster({
-      clinicianKey: "dashboard-secret",
-      clinicId: "prerna-health",
-    });
-
+    await fetchRoster({ clinicianKey: "opaque-access-token", clinicId: "prerna-health" });
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe(
-      "https://api-beta.predicatelabs.ai/api/controlled-beta/clinician/patients"
+      "https://api-beta.predicatelabs.ai/api/clinician/patients?practiceId=prerna-health"
     );
     expect(options.headers).toEqual({
-      "x-clinician-key": "dashboard-secret",
+      Authorization: "Bearer opaque-access-token",
     });
   });
 
-  it("does not send client-selected practice or actor authority on patient reads", async () => {
+  it("never sends legacy key or client-selected actor headers", async () => {
     const { fetchPatient } = await importApi();
-
     await fetchPatient({
       patientId: "patient-123",
-      clinicianKey: "dashboard-secret",
-      clinicianId: "clinician-123",
-      clinicianRole: "reviewing_clinician",
-      clinicId: "alpha-v1",
+      clinicianKey: "opaque-access-token",
+      clinicianId: "spoofed-clinician",
+      clinicianRole: "predicate_superadmin",
+      practiceId: "spoofed-practice",
+      clinicId: "prerna-health",
     });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123",
-      expect.objectContaining({
-        headers: {
-          "x-clinician-key": "dashboard-secret",
-        },
-      })
-    );
+    const [, options] = global.fetch.mock.calls[0];
+    expect(options.headers.Authorization).toBe("Bearer opaque-access-token");
+    expect(options.headers["x-clinician-key"]).toBeUndefined();
+    expect(options.headers["x-clinician-id"]).toBeUndefined();
+    expect(options.headers["x-clinician-role"]).toBeUndefined();
+    expect(options.headers["x-practice-id"]).toBeUndefined();
   });
 
-  it("sanitizes 403 errors for patient-specific reads", async () => {
+  it("uses governed enrollment and roster paths", async () => {
+    const { createPatientEnrollment, fetchRoster } = await importApi();
+    await createPatientEnrollment({
+      clinicianKey: "opaque-access-token",
+      clinicId: "prerna-health",
+      payload: {
+        firstName: "Fabricated",
+        lastName: "Patient",
+        email: "controlled@example.test",
+        authorizedElectronicContact: true,
+      },
+    });
+    await fetchRoster({ clinicianKey: "opaque-access-token", clinicId: "prerna-health" });
+    expect(global.fetch.mock.calls[0][0]).toContain("/api/clinician/enrollments");
+    expect(global.fetch.mock.calls[1][0]).toContain("/api/clinician/patients");
+    expect(global.fetch.mock.calls.flat().join(" ")).not.toContain("/api/controlled-beta/");
+  });
+
+  it("sanitizes assignment denial on patient reads", async () => {
     global.fetch.mockResolvedValueOnce({
       ok: false,
       status: 403,
-      json: vi.fn().mockResolvedValue({
-        error: "Forbidden for dashboard-secret and patient private payload",
-      }),
+      json: vi.fn().mockResolvedValue({ error: "private backend detail" }),
     });
     const { fetchPatient } = await importApi();
-
     await expect(
       fetchPatient({
         patientId: "patient-123",
-        clinicianKey: "dashboard-secret",
-        clinicId: "alpha-v1",
+        clinicianKey: "opaque-access-token",
+        clinicId: "prerna-health",
       })
     ).rejects.toMatchObject({
       status: 403,
@@ -77,227 +82,21 @@ describe("controlled-beta request authority", () => {
     });
   });
 
-  it("does not send client-selected practice or actor authority on review actions", async () => {
-    const { markCareTeamUpdateReviewed } = await importApi();
-
-    await markCareTeamUpdateReviewed({
-      id: "update-1",
-      clinicianKey: "dashboard-secret",
-      clinicianId: "clinician-123",
-      clinicianRole: "reviewing_clinician",
-      practiceId: "practice-456",
-      clinicId: "alpha-v1",
+  it("keeps bearer material out of request URLs and bodies", async () => {
+    const { createPatientEnrollment } = await importApi();
+    await createPatientEnrollment({
+      clinicianKey: "opaque-access-token",
+      clinicId: "prerna-health",
+      payload: {
+        firstName: "Fabricated",
+        lastName: "Patient",
+        email: "controlled@example.test",
+        authorizedElectronicContact: true,
+      },
     });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review",
-      expect.objectContaining({
-        method: "POST",
-        headers: {
-          "x-clinician-key": "dashboard-secret",
-        },
-      })
-    );
-  });
-
-  it("routes controlled care-team updates through the shared-key staging endpoint", async () => {
-    const { fetchCareTeamUpdates } = await importApi();
-
-    await fetchCareTeamUpdates({
-      clinicianKey: "dashboard-secret",
-      clinicId: "predicate-july20-controlled-beta",
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/care-team-updates",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "x-clinician-key": "dashboard-secret",
-        }),
-      })
-    );
-  });
-
-  it("uses only the controlled patient detail endpoint for beta vitals", async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: vi.fn().mockResolvedValue({ vitals: [] }),
-    });
-    const { fetchPatientVitals } = await importApi();
-
-    await fetchPatientVitals({
-      patientId: "patient-123",
-      clinicianKey: "dashboard-secret",
-      clinicId: "predicate-july20-controlled-beta",
-    });
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(global.fetch.mock.calls[0][0]).toBe(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123"
-    );
-  });
-
-  it("omits browser-derived actor defaults", async () => {
-    const { fetchInternalAuditEvents } = await importApi();
-
-    await fetchInternalAuditEvents({
-      clinicianKey: "dashboard-secret",
-      limit: 10,
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/internal/audit-events?limit=10",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "x-clinician-key": "dashboard-secret",
-        }),
-      })
-    );
-  });
-
-  it("does not transmit build-time actor identity for protected operations views", async () => {
-    vi.stubEnv("VITE_CLINICIAN_ID", "env-clinician");
-    vi.stubEnv("VITE_CLINICIAN_ROLE", "ops_reviewer");
-    vi.stubEnv("VITE_PRACTICE_ID", "env-practice");
-    const { fetchPilotReadyV1Readiness, fetchPilotGoNoGoChecklist } = await importApi();
-
-    await fetchPilotReadyV1Readiness({
-      clinicianKey: "dashboard-secret",
-      clinicId: "alpha-v1",
-    });
-    await fetchPilotGoNoGoChecklist({
-      clinicianKey: "dashboard-secret",
-      clinicId: "alpha-v1",
-    });
-
-    const [, readinessOptions] = global.fetch.mock.calls[0];
-    const [, goNoGoOptions] = global.fetch.mock.calls[1];
-
-    expect(readinessOptions.headers).toEqual({ "x-clinician-key": "dashboard-secret" });
-    expect(goNoGoOptions.headers).toEqual({ "x-clinician-key": "dashboard-secret" });
-  });
-
-  it("keeps clinician key separate from actor identity", async () => {
-    const { buildClinicianHeaders, fetchInternalAuditEvents } = await importApi();
-
-    const headers = buildClinicianHeaders({
-      clinicianKey: "dashboard-secret",
-      clinicId: "alpha-v1",
-    });
-
-    expect(headers["x-clinician-key"]).toBe("dashboard-secret");
-    expect(headers["x-clinician-id"]).not.toBe("dashboard-secret");
-    expect(headers["x-clinician-role"]).not.toBe("dashboard-secret");
-    expect(headers["x-practice-id"]).toBe("alpha-v1");
-
-    await fetchInternalAuditEvents({
-      clinicianKey: "dashboard-secret",
-      clinicId: "alpha-v1",
-      limit: 5,
-    });
-
-    expect(global.fetch.mock.calls[0][0]).not.toContain("dashboard-secret");
-  });
-
-  it("does not allow the selector value to alter roster authority", async () => {
-    const { fetchRoster } = await importApi();
-
-    await fetchRoster({
-      clinicianKey: "dashboard-secret",
-      clinicId: "predicate-pilot",
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/patients",
-      expect.objectContaining({
-        headers: {
-          "x-clinician-key": "dashboard-secret",
-        },
-      })
-    );
-  });
-
-  it("does not use the legacy production-v1 scope for pilot roster requests", async () => {
-    const { fetchRoster } = await importApi();
-
-    await fetchRoster({
-      clinicianKey: "dashboard-secret",
-      clinicId: "predicate-pilot",
-    });
-
     const [url, options] = global.fetch.mock.calls[0];
-    expect(url).not.toContain("production-v1");
-    expect(url).not.toContain("clinicId");
-    expect(options.headers["x-practice-id"]).not.toBe("production-v1");
-  });
-
-  it("posts sanitized backup restore evidence", async () => {
-    const { createBackupRestoreEvidence } = await importApi();
-
-    await createBackupRestoreEvidence({
-      clinicianKey: "dashboard-secret",
-      clinicId: "alpha-v1",
-      payload: {
-        evidenceType: "restore_drill",
-        subsystem: "database",
-        status: "verified",
-        verifiedBy: "ops-user",
-        notes: "Patient Jane Example token secret-value was present.",
-      },
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/pilot-ready-v1/backup-restore-evidence",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          "content-type": "application/json",
-          "x-clinician-key": "dashboard-secret",
-        }),
-        body: JSON.stringify({
-          evidenceType: "restore_drill",
-          subsystem: "database",
-          status: "verified",
-          verifiedBy: "ops-user",
-          notes: "Notes omitted because they may contain PHI or secrets.",
-        }),
-      })
-    );
-  });
-
-  it("posts sanitized clinical governance evidence", async () => {
-    const { createClinicalGovernanceEvidence } = await importApi();
-
-    await createClinicalGovernanceEvidence({
-      clinicianKey: "dashboard-secret",
-      clinicId: "alpha-v1",
-      payload: {
-        evidenceType: "clinical_review",
-        status: "approved",
-        reviewedBy: "reviewer-1",
-        reviewerRole: "Medical Director",
-        notes: "Patient Jane Example API key secret-value was discussed.",
-      },
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/pilot-ready-v1/clinical-governance-evidence",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          "content-type": "application/json",
-          "x-clinician-key": "dashboard-secret",
-        }),
-        body: JSON.stringify({
-          evidenceType: "clinical_review",
-          status: "approved",
-          reviewedBy: "reviewer-1",
-          reviewerRole: "Medical Director",
-          notes: "Notes omitted because they may contain PHI or secrets.",
-        }),
-      })
-    );
+    expect(url).not.toContain("opaque-access-token");
+    expect(options.body).not.toContain("opaque-access-token");
   });
 });
 
