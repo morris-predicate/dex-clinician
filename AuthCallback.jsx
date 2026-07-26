@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { completeClinicianAuthentication } from "./clinicianCognito.js";
 
 export default function AuthCallback({ onAuthenticated }) {
