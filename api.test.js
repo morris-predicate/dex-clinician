@@ -20,7 +20,7 @@ describe("governed clinician request authority", () => {
     await fetchRoster({ clinicianKey: "opaque-access-token", clinicId: "prerna-health" });
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe(
-      "https://api-beta.predicatelabs.ai/api/clinician/patients?practiceId=prerna-health"
+      "https://api-beta.predicatelabs.ai/api/clinician/patients?practiceId=prerna-health&clinicId=prerna-health"
     );
     expect(options.headers).toEqual({
       Authorization: "Bearer opaque-access-token",

@@ -29,7 +29,13 @@ async function request(
   } = {}
 ) {
   const url = new URL(`${PROXY_URL}${path}`);
-  if (clinicId) url.searchParams.set("practiceId", clinicId);
+  if (clinicId) {
+    // The governed enrollment router names this selector practiceId, while the
+    // established clinician roster router still names the same verified scope
+    // clinicId. Send equal values; neither value supplies actor authority.
+    url.searchParams.set("practiceId", clinicId);
+    url.searchParams.set("clinicId", clinicId);
+  }
   const headers = buildClinicianHeaders({ clinicianKey });
   if (body !== undefined) headers["content-type"] = "application/json";
 
