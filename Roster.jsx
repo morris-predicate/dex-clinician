@@ -17,6 +17,8 @@ export default function Roster({
   canAccessStatusAudit = false,
   onOpenStatusAudit,
   onEnrollPatient,
+  canManageUsers = false,
+  onOpenUserAdministration,
 }) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -202,6 +204,7 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
               Launch Readiness
             </button>
           )}
+          {canManageUsers && <button type="button" className="command-nav-item" onClick={onOpenUserAdministration}><span />User Administration</button>}
         </nav>
 
         <div className="command-nav-footer">
@@ -229,6 +232,7 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
             >
               Enroll New Patient
             </button>
+            {canManageUsers && <button className="btn-secondary-small" type="button" onClick={onOpenUserAdministration}>User Administration</button>}
             <span className="command-status-pill">Pilot-Ready v1</span>
             <span className="command-status-pill healthy">Status: Ready</span>
             {canAccessStatusAudit && (

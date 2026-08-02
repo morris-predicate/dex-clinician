@@ -16,6 +16,14 @@ afterEach(() => {
 });
 
 describe("controlled-beta request authority", () => {
+  it("uses a bearer token for the server-authorized user administration session", async () => {
+    const { fetchUserAdministrationSession } = await importApi();
+    await fetchUserAdministrationSession({ clinicianKey: "signed-access-token" });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/user-administration/session",
+      expect.objectContaining({ headers: { Authorization: "Bearer signed-access-token" }, method: "GET" })
+    );
+  });
   it("uses the controlled API base and roster path without client authority", async () => {
     vi.stubEnv("VITE_PROXY_URL", "https://api-beta.predicatelabs.ai");
     const { fetchRoster } = await importApi();

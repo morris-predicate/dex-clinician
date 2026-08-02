@@ -1,11 +1,13 @@
 import React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Login from "./Login.jsx";
 import Roster from "./Roster.jsx";
 import PatientDetail from "./PatientDetail.jsx";
 import EnrollPatient from "./EnrollPatient.jsx";
 import { DEFAULT_CLINIC_ID, normalizeClinicId } from "./clinicConfig.js";
 import StatusAuditPage from "./components/StatusAuditPage.jsx";
+import UserAdministration from "./UserAdministration.jsx";
+import { fetchUserAdministrationSession } from "./api.js";
 import {
   canAccessStatusAudit,
   getConfiguredClinicianRole,
@@ -34,8 +36,10 @@ export default function App() {
   );
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [activeView, setActiveView] = useState("patients");
+  const [canManageUsers, setCanManageUsers] = useState(false);
   const clinicianRole = getConfiguredClinicianRole();
   const statusAuditAllowed = canAccessStatusAudit(clinicianRole);
+  useEffect(() => { let active = true; if (!clinicianKey) { setCanManageUsers(false); return undefined; } fetchUserAdministrationSession({ clinicianKey }).then((result) => { if (active) setCanManageUsers(result.canManageUsers === true); }).catch(() => { if (active) setCanManageUsers(false); }); return () => { active = false; }; }, [clinicianKey]);
 
   function handleAuth(key) {
     sessionStorage.setItem(STORAGE_KEY, key);
@@ -94,6 +98,7 @@ export default function App() {
       />
     );
   }
+  if (activeView === "user-administration" && canManageUsers) return <UserAdministration clinicianKey={clinicianKey} onBack={() => setActiveView("patients")} onLogout={handleLogout} />;
 
   // ── Detail view ─────────────────────────────────────────────────────────────
   if (selectedPatientId) {
@@ -116,6 +121,8 @@ export default function App() {
       canAccessStatusAudit={statusAuditAllowed}
       onOpenStatusAudit={() => setActiveView("status-audit")}
       onEnrollPatient={() => setActiveView("enroll")}
+      canManageUsers={canManageUsers}
+      onOpenUserAdministration={() => setActiveView("user-administration")}
       onSelectPatient={setSelectedPatientId}
       onLogout={handleLogout}
     />
