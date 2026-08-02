@@ -15,6 +15,14 @@ afterEach(() => {
 });
 
 describe("governed clinician request authority", () => {
+  it("uses a bearer token for the server-authorized user administration session", async () => {
+    const { fetchUserAdministrationSession } = await importApi();
+    await fetchUserAdministrationSession({ clinicianKey: "signed-access-token" });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://api-beta.predicatelabs.ai/api/user-administration/session",
+      expect.objectContaining({ headers: { Authorization: "Bearer signed-access-token" }, method: "GET" })
+    );
+  });
   it("uses the governed roster route with a Cognito bearer token", async () => {
     const { fetchRoster } = await importApi();
     await fetchRoster({ clinicianKey: "opaque-access-token", clinicId: "prerna-health" });

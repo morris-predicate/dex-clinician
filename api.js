@@ -63,6 +63,26 @@ async function request(
   return data;
 }
 
+async function userAdministrationRequest(path, { clinicianKey, method = "GET", body } = {}) {
+  const res = await fetch(new URL(`${PROXY_URL}/api/user-administration${path}`).toString(), {
+    method,
+    headers: { Authorization: `Bearer ${clinicianKey || ""}`, ...(body !== undefined ? { "content-type": "application/json" } : {}) },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const error = new Error(data.error || "User administration is unavailable"); error.status = res.status; error.code = data.code; throw error; }
+  return data;
+}
+
+export const fetchUserAdministrationSession = (opts) => userAdministrationRequest("/session", opts);
+export const fetchManagedClinicians = (opts) => userAdministrationRequest("/clinicians", opts);
+export const inviteManagedClinician = ({ payload, ...opts }) => userAdministrationRequest("/clinicians", { ...opts, method: "POST", body: payload });
+export const runManagedClinicianAction = ({ reference, action, ...opts }) => userAdministrationRequest(`/clinicians/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`, { ...opts, method: "POST", body: {} });
+export const fetchManagedPatients = (opts) => userAdministrationRequest("/patients", opts);
+export const enrollManagedPatient = ({ payload, ...opts }) => userAdministrationRequest("/patients", { ...opts, method: "POST", body: payload });
+export const runManagedPatientAction = ({ reference, action, ...opts }) => userAdministrationRequest(`/patients/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`, { ...opts, method: "POST", body: {} });
+export const fetchUserAdministrationAudit = ({ reference, ...opts } = {}) => userAdministrationRequest(`/audit${reference ? `?reference=${encodeURIComponent(reference)}` : ""}`, opts);
+
 export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
 
 export const createPatientEnrollment = ({ payload, ...opts }) =>
