@@ -4188,4 +4188,37 @@ textarea:focus-visible {
 .user-admin-badge { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 9px; border: 1px solid rgba(148, 163, 184, .68); border-radius: 999px; background: rgba(148, 163, 184, .16); color: #edf6ff; font-size: .78rem; font-weight: 700; white-space: nowrap; }.user-admin-badge.status-active, .user-admin-badge.status-authorized, .user-admin-badge.status-eligible { border-color: rgba(64, 210, 166, .78); background: rgba(64, 210, 166, .16); color: #d5fff0; }.user-admin-badge.status-sent, .user-admin-badge.status-resent, .user-admin-badge.status-force_change_password, .user-admin-badge.status-required_pending, .user-admin-badge.status-pending, .user-admin-badge.status-invited, .user-admin-badge.status-pending_activation { border-color: rgba(112, 214, 234, .72); background: rgba(112, 214, 234, .14); color: #d9f9ff; }
 .enrollment-consent { display: flex !important; align-items: flex-start; gap: 11px; color: #e7eef7 !important; font-weight: 500 !important; line-height: 1.45; }.enrollment-consent input { width: 20px; min-width: 20px; height: 20px; min-height: 20px; margin: 1px 0 0; accent-color: #62d7e7; }.enrollment-consent span { padding-top: 1px; }
 .user-admin-audit { display: grid; gap: 8px; padding-left: 20px; }
+.user-admin-form .login-btn {
+  width: auto;
+  justify-self: start;
+  min-width: 180px;
+  border: 1px solid #94dbe9;
+  background: #d6eef6 !important;
+  color: #102532 !important;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(2, 30, 43, .18);
+}
+.user-admin-form .login-btn:hover:not(:disabled) {
+  border-color: #5eb8cd;
+  background: #c5e8f2 !important;
+  color: #081b26 !important;
+}
+.user-admin-form .login-btn:focus-visible {
+  outline: 3px solid #7ce6f7;
+  outline-offset: 3px;
+}
+.user-admin-form .login-btn:disabled {
+  border-color: #9cb9c2;
+  background: #c6dce2 !important;
+  color: #263d48 !important;
+  cursor: not-allowed;
+  opacity: 1;
+}
+.user-admin-table-wrap {
+  max-width: 100%;
+  padding-bottom: 4px;
+  scrollbar-gutter: stable;
+}
+.user-admin-list table { min-width: 1240px; }
+.user-admin-list th:last-child, .user-admin-list td:last-child { min-width: 270px; }
 @media (max-width: 760px) { .user-admin-form { grid-template-columns: 1fr; } }
