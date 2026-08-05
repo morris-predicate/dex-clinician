@@ -2,7 +2,7 @@ import React from "react";
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import Login from "./Login.jsx";
+import Login, { getLoginErrorMessage } from "./Login.jsx";
 import { fetchRoster } from "./api.js";
 
 vi.mock("./api.js", () => ({
@@ -80,6 +80,20 @@ describe("controlled-beta login contexts", () => {
     expect(
       await screen.findByText("Couldn't reach the server. Please try again.")
     ).toBeInTheDocument();
+  });
+
+  it("maps HTTP and network failures to distinct safe login guidance", () => {
+    expect(getLoginErrorMessage({ status: 401 })).toBe("Incorrect access key.");
+    expect(getLoginErrorMessage({ status: 403 })).toBe("Access denied for this clinic.");
+    expect(getLoginErrorMessage({ status: 404 })).toBe(
+      "Clinician service configuration is unavailable. Please contact support."
+    );
+    expect(getLoginErrorMessage({ status: 503 })).toBe(
+      "The clinician service is temporarily unavailable. Please try again."
+    );
+    expect(getLoginErrorMessage(new TypeError("Failed to fetch"))).toBe(
+      "Couldn't reach the server. Please try again."
+    );
   });
 
   it("opens the authenticated application after a successful HTTP response", async () => {

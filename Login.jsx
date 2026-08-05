@@ -3,6 +3,19 @@ import { useState } from "react";
 import { fetchRoster } from "./api.js";
 import { CLINICS, normalizeClinicId } from "./clinicConfig.js";
 
+export function getLoginErrorMessage(error = {}) {
+  if (error.status === 401) return "Incorrect access key.";
+  if (error.status === 403) return "Access denied for this clinic.";
+  if (error.status === 404) {
+    return "Clinician service configuration is unavailable. Please contact support.";
+  }
+  if (Number(error.status) >= 500) {
+    return "The clinician service is temporarily unavailable. Please try again.";
+  }
+  if (error.status) return "Unable to verify access right now. Please try again.";
+  return "Couldn't reach the server. Please try again.";
+}
+
 export default function Login({ clinicId, onAuth }) {
   const [password, setPassword] = useState("");
   const [selectedClinic, setSelectedClinic] = useState(
@@ -34,9 +47,7 @@ export default function Login({ clinicId, onAuth }) {
 
       onAuth(password.trim());
     } catch (err) {
-      if (err.status === 401) setError("Incorrect access key.");
-      else if (err.status === 403) setError("Access denied for this clinic.");
-      else setError("Couldn't reach the server. Please try again.");
+      setError(getLoginErrorMessage(err));
       setBusy(false);
     }
   }

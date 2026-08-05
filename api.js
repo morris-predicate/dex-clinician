@@ -127,7 +127,7 @@ export const enrollManagedPatient = ({ payload, ...opts }) => userAdministration
 export const runManagedPatientAction = ({ reference, action, ...opts }) => userAdministrationRequest(`/patients/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`, { ...opts, method: "POST", body: {} });
 export const fetchUserAdministrationAudit = ({ reference, ...opts } = {}) => userAdministrationRequest(`/audit${reference ? `?reference=${encodeURIComponent(reference)}` : ""}`, opts);
 
-export const fetchRoster = (opts) => request("/api/controlled-beta/clinician/patients", opts);
+export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
 
 export const createPatientEnrollment = ({ payload, ...opts }) =>
   request("/api/clinician/enrollments", {
@@ -147,7 +147,7 @@ export const regeneratePatientTemporaryPassword = ({ enrollmentId, ...opts }) =>
   });
 
 export const fetchPatient = ({ patientId, ...opts }) =>
-  request(`/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`, {
+  request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, {
     ...opts,
     patientScoped: true,
   });
@@ -173,7 +173,7 @@ export const fetchPatientBaseline = ({ patientId, ...opts }) =>
 export const fetchPatientSignals = async ({ patientId, ...opts }) => {
   if (CONTROLLED_BETA) {
     const data = await request(
-      `/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`,
+      `/api/clinician/patients/${encodeURIComponent(patientId)}`,
       { ...opts, patientScoped: true }
     );
     return {
@@ -189,13 +189,13 @@ export const fetchPatientSignals = async ({ patientId, ...opts }) => {
 };
 
 export const fetchCareTeamUpdates = (opts) =>
-  request("/api/controlled-beta/clinician/care-team-updates", {
+  request("/api/clinician/care-team-updates", {
     ...opts,
     patientScoped: true,
   });
 
 export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
-  request(`/api/controlled-beta/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
+  request(`/api/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
     ...opts,
     method: "POST",
     patientScoped: true,
@@ -402,7 +402,7 @@ export async function fetchPatientVitals({
 }) {
   if (CONTROLLED_BETA) {
     const data = await request(
-      `/api/controlled-beta/clinician/patients/${encodeURIComponent(patientId)}`,
+      `/api/clinician/patients/${encodeURIComponent(patientId)}`,
       {
         clinicianKey,
         clinicianId,
