@@ -107,6 +107,40 @@ async function request(
   return data;
 }
 
+async function controlledBetaClinicianRequest(
+  path,
+  { clinicianKey, method = "GET", patientScoped = false, body } = {}
+) {
+  const headers = { "x-clinician-key": clinicianKey || "" };
+  if (body !== undefined) headers["content-type"] = "application/json";
+
+  const res = await fetch(
+    new URL(`${PROXY_URL}/api/controlled-beta/clinician${path}`).toString(),
+    {
+      method,
+      headers,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }
+  );
+
+  if (res.status === 401) {
+    const err = new Error("Unauthorized");
+    err.status = 401;
+    throw err;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message =
+      patientScoped && res.status === 403
+        ? PATIENT_ACCESS_DENIED_MESSAGE
+        : data.error || `Request failed (${res.status})`;
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
 async function userAdministrationRequest(path, { clinicianKey, method = "GET", body } = {}) {
   const res = await fetch(new URL(`${PROXY_URL}/api/user-administration${path}`).toString(), {
     method,
@@ -127,7 +161,7 @@ export const enrollManagedPatient = ({ payload, ...opts }) => userAdministration
 export const runManagedPatientAction = ({ reference, action, ...opts }) => userAdministrationRequest(`/patients/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`, { ...opts, method: "POST", body: {} });
 export const fetchUserAdministrationAudit = ({ reference, ...opts } = {}) => userAdministrationRequest(`/audit${reference ? `?reference=${encodeURIComponent(reference)}` : ""}`, opts);
 
-export const fetchRoster = (opts) => request("/api/clinician/patients", opts);
+export const fetchRoster = (opts) => controlledBetaClinicianRequest("/patients", opts);
 
 export const createPatientEnrollment = ({ payload, ...opts }) =>
   request("/api/clinician/enrollments", {
@@ -147,7 +181,7 @@ export const regeneratePatientTemporaryPassword = ({ enrollmentId, ...opts }) =>
   });
 
 export const fetchPatient = ({ patientId, ...opts }) =>
-  request(`/api/clinician/patients/${encodeURIComponent(patientId)}`, {
+  controlledBetaClinicianRequest(`/patients/${encodeURIComponent(patientId)}`, {
     ...opts,
     patientScoped: true,
   });
@@ -171,31 +205,25 @@ export const fetchPatientBaseline = ({ patientId, ...opts }) =>
       });
 
 export const fetchPatientSignals = async ({ patientId, ...opts }) => {
-  if (CONTROLLED_BETA) {
-    const data = await request(
-      `/api/clinician/patients/${encodeURIComponent(patientId)}`,
-      { ...opts, patientScoped: true }
-    );
-    return {
-      ok: true,
-      signals: data.vitals || [],
-      status: data.vitals?.length ? "available" : "no_monitoring_data",
-    };
-  }
-  return request(`/api/clinician/patients/${encodeURIComponent(patientId)}/signals`, {
-    ...opts,
-    patientScoped: true,
-  });
+  const data = await controlledBetaClinicianRequest(
+    `/patients/${encodeURIComponent(patientId)}`,
+    { ...opts, patientScoped: true }
+  );
+  return {
+    ok: true,
+    signals: data.vitals || [],
+    status: data.vitals?.length ? "available" : "no_monitoring_data",
+  };
 };
 
 export const fetchCareTeamUpdates = (opts) =>
-  request("/api/clinician/care-team-updates", {
+  controlledBetaClinicianRequest("/care-team-updates", {
     ...opts,
     patientScoped: true,
   });
 
 export const markCareTeamUpdateReviewed = ({ id, ...opts }) =>
-  request(`/api/clinician/care-team-updates/${encodeURIComponent(id)}/review`, {
+  controlledBetaClinicianRequest(`/care-team-updates/${encodeURIComponent(id)}/review`, {
     ...opts,
     method: "POST",
     patientScoped: true,
@@ -400,90 +428,16 @@ export async function fetchPatientVitals({
   practiceId,
   clinicId,
 }) {
-  if (CONTROLLED_BETA) {
-    const data = await request(
-      `/api/clinician/patients/${encodeURIComponent(patientId)}`,
-      {
-        clinicianKey,
-        clinicianId,
-        clinicianRole,
-        practiceId,
-        clinicId,
-        patientScoped: true,
-      }
-    );
-    return Array.isArray(data?.vitals) ? data.vitals : [];
-  }
-  const candidatePaths = [
-    patientId
-      ? `/api/patients/${encodeURIComponent(patientId)}/vitals`
-      : null,
-
-    patientId
-      ? `/api/clinician/patients/${encodeURIComponent(patientId)}/vitals`
-      : null,
-
-    subjectUid
-      ? `/api/patients/${encodeURIComponent(subjectUid)}/vitals`
-      : null,
-
-    subjectUid
-      ? `/api/patients/${encodeURIComponent(subjectUid)}/vitals?subjectUid=${encodeURIComponent(subjectUid)}`
-      : null,
-
-    subjectUid
-      ? `/api/vitals?subjectUid=${encodeURIComponent(subjectUid)}`
-      : null,
-
-    subjectUid
-      ? `/api/signals/vitals?subjectUid=${encodeURIComponent(subjectUid)}`
-      : null,
-  ].filter(Boolean);
-
-  let firstSuccessfulEmpty = [];
-
-  for (const path of candidatePaths) {
-    try {
-      const data = await request(path, {
-        clinicianKey,
-        clinicianId,
-        clinicianRole,
-        practiceId,
-        clinicId,
-        patientScoped: true,
-      });
-
-      const candidate =
-        Array.isArray(data)
-          ? data
-          : Array.isArray(data?.vitals)
-          ? data.vitals
-          : Array.isArray(data?.readings)
-          ? data.readings
-          : Array.isArray(data?.items)
-          ? data.items
-          : Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data?.results)
-          ? data.results
-          : [];
-
-      if (candidate.length > 0) {
-  console.log("[fetchPatientVitals] found vitals", {
-    path,
-    count: candidate.length,
-  });
-}
-
-      if (candidate.length > 0) {
-        return candidate;
-      }
-
-      firstSuccessfulEmpty = candidate;
-    } catch (err) {
-      console.warn("[fetchPatientVitals] candidate failed", path, err.message);
+  const data = await controlledBetaClinicianRequest(
+    `/patients/${encodeURIComponent(patientId)}`,
+    {
+      clinicianKey,
+      clinicianId,
+      clinicianRole,
+      practiceId,
+      clinicId,
+      patientScoped: true,
     }
-  }
-
-  return firstSuccessfulEmpty;
+  );
+  return Array.isArray(data?.vitals) ? data.vitals : [];
 }

@@ -24,7 +24,7 @@ describe("controlled-beta request authority", () => {
       expect.objectContaining({ headers: { Authorization: "Bearer signed-access-token" }, method: "GET" })
     );
   });
-  it("uses the controlled API base and roster path without client authority", async () => {
+  it("uses the controlled-beta roster namespace without client authority", async () => {
     vi.stubEnv("VITE_PROXY_URL", "https://api-beta.predicatelabs.ai");
     vi.stubEnv("VITE_CONTROLLED_BETA", "false");
     const { fetchRoster } = await importApi();
@@ -36,13 +36,10 @@ describe("controlled-beta request authority", () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe(
-      "https://api-beta.predicatelabs.ai/api/clinician/patients?clinicId=prerna-health"
+      "https://api-beta.predicatelabs.ai/api/controlled-beta/clinician/patients"
     );
     expect(options.headers).toEqual({
       "x-clinician-key": "dashboard-secret",
-      "x-clinician-id": "unknown_clinician",
-      "x-clinician-role": "clinician",
-      "x-practice-id": "prerna-health",
     });
   });
 
@@ -58,7 +55,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/patients/patient-123",
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123",
       expect.objectContaining({
         headers: {
           "x-clinician-key": "dashboard-secret",
@@ -102,7 +99,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/care-team-updates/update-1/review",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review",
       expect.objectContaining({
         method: "POST",
         headers: {
@@ -121,7 +118,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/care-team-updates",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates",
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-clinician-key": "dashboard-secret",
@@ -146,7 +143,7 @@ describe("controlled-beta request authority", () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch.mock.calls[0][0]).toBe(
-      "https://proxy.test/api/clinician/patients/patient-123"
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123"
     );
   });
 
@@ -221,7 +218,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/clinician/patients",
+      "https://proxy.test/api/controlled-beta/clinician/patients",
       expect.objectContaining({
         headers: {
           "x-clinician-key": "dashboard-secret",
@@ -242,6 +239,28 @@ describe("controlled-beta request authority", () => {
     expect(url).not.toContain("production-v1");
     expect(url).not.toContain("clinicId");
     expect(options.headers["x-practice-id"]).not.toBe("production-v1");
+  });
+
+  it("does not fall back to the canonical Cognito route after a controlled-beta failure", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: vi.fn().mockResolvedValue({ error: "Unavailable" }),
+    });
+    const { fetchPatientVitals } = await importApi();
+
+    await expect(
+      fetchPatientVitals({
+        patientId: "patient-123",
+        clinicianKey: "dashboard-secret",
+        clinicId: "predicate-admin",
+      })
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch.mock.calls[0][0]).toBe(
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123"
+    );
   });
 
   it("posts sanitized backup restore evidence", async () => {
