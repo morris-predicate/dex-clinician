@@ -110,6 +110,11 @@ describe("controlled-beta login contexts", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-    await waitFor(() => expect(onAuth).toHaveBeenCalledWith("controlled-key"));
+    await waitFor(() =>
+      expect(onAuth).toHaveBeenCalledWith(
+        "controlled-key",
+        "controlled-beta-access-key"
+      )
+    );
   });
 });

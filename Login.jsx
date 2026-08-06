@@ -1,6 +1,7 @@
 import React from "react";
 import { useState } from "react";
 import { fetchRoster } from "./api.js";
+import { AUTH_MODES } from "./authMode.js";
 import { CLINICS, normalizeClinicId } from "./clinicConfig.js";
 
 export function getLoginErrorMessage(error = {}) {
@@ -48,7 +49,7 @@ export default function Login({ clinicId, onAuth }) {
         clinicId: selectedClinic,
       });
 
-      onAuth(password.trim());
+      onAuth(password.trim(), AUTH_MODES.CONTROLLED_BETA_ACCESS_KEY);
     } catch (err) {
       setError(getLoginErrorMessage(err));
       setBusy(false);

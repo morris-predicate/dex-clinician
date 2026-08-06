@@ -8,6 +8,11 @@ import StatusAuditPage from "./components/StatusAuditPage.jsx";
 import UserAdministration from "./UserAdministration.jsx";
 import { fetchUserAdministrationSession } from "./api.js";
 import {
+  AUTH_MODES,
+  AUTH_MODE_STORAGE_KEY,
+  isGovernedCognitoMode,
+} from "./authMode.js";
+import {
   canAccessStatusAudit,
   getConfiguredClinicianRole,
 } from "./clinicianAccess.js";
@@ -33,21 +38,44 @@ export default function App() {
   const [clinicianKey, setClinicianKey] = useState(() =>
     sessionStorage.getItem(STORAGE_KEY)
   );
+  const [authMode, setAuthMode] = useState(() =>
+    sessionStorage.getItem(AUTH_MODE_STORAGE_KEY)
+  );
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [activeView, setActiveView] = useState("patients");
   const [canManageUsers, setCanManageUsers] = useState(false);
   const clinicianRole = getConfiguredClinicianRole();
   const statusAuditAllowed = canAccessStatusAudit(clinicianRole);
-  useEffect(() => { let active = true; if (!clinicianKey) { setCanManageUsers(false); return undefined; } fetchUserAdministrationSession({ clinicianKey }).then((result) => { if (active) setCanManageUsers(result.canManageUsers === true); }).catch(() => { if (active) setCanManageUsers(false); }); return () => { active = false; }; }, [clinicianKey]);
+  useEffect(() => {
+    let active = true;
+    if (!clinicianKey || !isGovernedCognitoMode(authMode)) {
+      setCanManageUsers(false);
+      return undefined;
+    }
+    fetchUserAdministrationSession({ clinicianKey })
+      .then((result) => {
+        if (active) setCanManageUsers(result.canManageUsers === true);
+      })
+      .catch(() => {
+        if (active) setCanManageUsers(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authMode, clinicianKey]);
 
-  function handleAuth(key) {
+  function handleAuth(key, mode = AUTH_MODES.CONTROLLED_BETA_ACCESS_KEY) {
     sessionStorage.setItem(STORAGE_KEY, key);
+    sessionStorage.setItem(AUTH_MODE_STORAGE_KEY, mode);
+    setAuthMode(mode);
     setClinicianKey(key);
   }
 
   function handleLogout() {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_MODE_STORAGE_KEY);
     setClinicianKey(null);
+    setAuthMode(null);
     setSelectedPatientId(null);
     setActiveView("patients");
   }
