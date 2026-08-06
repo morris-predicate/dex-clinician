@@ -11,11 +11,15 @@ vi.mock("./api.js", () => ({
 }));
 
 vi.mock("./Roster.jsx", () => ({
-  default: () => <div>Controlled-beta roster</div>,
+  default: ({ canManageUsers, onOpenUserAdministration, onLogout }) => <div>
+    Controlled-beta roster
+    {canManageUsers && <button onClick={onOpenUserAdministration}>User Administration</button>}
+    <button onClick={onLogout}>Sign out</button>
+  </div>,
 }));
 
 vi.mock("./PatientDetail.jsx", () => ({ default: () => null }));
-vi.mock("./UserAdministration.jsx", () => ({ default: () => null }));
+vi.mock("./UserAdministration.jsx", () => ({ default: () => <div>Admin Dashboard</div> }));
 vi.mock("./components/StatusAuditPage.jsx", () => ({ default: () => null }));
 
 const KEY_STORAGE = "dex.clinician.key";
@@ -35,7 +39,7 @@ afterEach(() => {
 });
 
 describe("authenticated clinician mode", () => {
-  it("does not request a governed user-administration session after controlled-beta access-key login", async () => {
+  it("requests the controlled-beta admin session and enables the Admin Dashboard after access-key login", async () => {
     render(<App />);
 
     fireEvent.change(screen.getByPlaceholderText("Access key"), {
@@ -44,7 +48,12 @@ describe("authenticated clinician mode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(await screen.findByText("Controlled-beta roster")).toBeInTheDocument();
-    await waitFor(() => expect(fetchUserAdministrationSession).not.toHaveBeenCalled());
+    await waitFor(() => expect(fetchUserAdministrationSession).toHaveBeenCalledWith({
+      clinicianKey: "controlled-key",
+      authMode: "controlled-beta-access-key",
+    }));
+    fireEvent.click(await screen.findByRole("button", { name: "User Administration" }));
+    expect(await screen.findByText("Admin Dashboard")).toBeInTheDocument();
   });
 
   it("retains the governed user-administration session check for an explicit Cognito mode", async () => {
@@ -56,6 +65,7 @@ describe("authenticated clinician mode", () => {
     await waitFor(() => {
       expect(fetchUserAdministrationSession).toHaveBeenCalledWith({
         clinicianKey: "governed-access-token",
+        authMode: "governed-cognito",
       });
     });
   });
@@ -67,5 +77,28 @@ describe("authenticated clinician mode", () => {
 
     expect(await screen.findByText("Controlled-beta roster")).toBeInTheDocument();
     expect(fetchUserAdministrationSession).not.toHaveBeenCalled();
+  });
+
+  it("does not expose direct Admin Dashboard access when the server denies capability", async () => {
+    fetchUserAdministrationSession.mockResolvedValueOnce({ canManageUsers: false });
+    sessionStorage.setItem(KEY_STORAGE, "controlled-key");
+    sessionStorage.setItem(MODE_STORAGE, "controlled-beta-access-key");
+
+    render(<App />);
+
+    expect(await screen.findByText("Controlled-beta roster")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "User Administration" })).not.toBeInTheDocument();
+  });
+
+  it("clears both credential and server-established mode state on logout", async () => {
+    sessionStorage.setItem(KEY_STORAGE, "controlled-key");
+    sessionStorage.setItem(MODE_STORAGE, "controlled-beta-access-key");
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+
+    expect(sessionStorage.getItem(KEY_STORAGE)).toBeNull();
+    expect(sessionStorage.getItem(MODE_STORAGE)).toBeNull();
+    expect(await screen.findByPlaceholderText("Access key")).toBeInTheDocument();
   });
 });

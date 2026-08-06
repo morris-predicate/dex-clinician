@@ -18,7 +18,7 @@ describe("User Administration", () => {
   });
 
   it("offers governed clinician and patient tabs without credential fields", async () => {
-    render(<UserAdministration clinicianKey="token" onBack={() => {}} onLogout={() => {}} />);
+    render(<UserAdministration clinicianKey="token" authMode="controlled-beta-access-key" onBack={() => {}} onLogout={() => {}} />);
     expect(await screen.findByRole("heading", { name: "Invite clinician" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Patients" })).toBeTruthy();
     expect(screen.queryByLabelText(/password/i)).toBeNull();
@@ -26,7 +26,7 @@ describe("User Administration", () => {
   });
 
   it("submits the approved clinician role and trusted group then shows invitation sent", async () => {
-    render(<UserAdministration clinicianKey="token" onBack={() => {}} onLogout={() => {}} />);
+    render(<UserAdministration clinicianKey="token" authMode="controlled-beta-access-key" onBack={() => {}} onLogout={() => {}} />);
     fireEvent.change(await screen.findByLabelText("Full name"), { target: { value: "Example Clinician" } });
     fireEvent.change(screen.getByLabelText("Professional email"), { target: { value: "clinician@example.test" } });
     fireEvent.click(screen.getByRole("button", { name: "Send invitation" }));
@@ -36,7 +36,7 @@ describe("User Administration", () => {
 
   it("does not falsely render a patient as a clinician", async () => {
     api.fetchManagedPatients.mockResolvedValue({ patients: [{ reference: "enr-safe", displayName: "Approved identifier", practice: "Prerna Health", enrollmentState: "invited" }] });
-    render(<UserAdministration clinicianKey="token" onBack={() => {}} onLogout={() => {}} />);
+    render(<UserAdministration clinicianKey="token" authMode="controlled-beta-access-key" onBack={() => {}} onLogout={() => {}} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Patients" }));
     expect(await screen.findByText("Approved identifier")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Patients" })).toBeTruthy();

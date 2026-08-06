@@ -147,10 +147,17 @@ async function controlledBetaClinicianRequest(
   return data;
 }
 
-async function userAdministrationRequest(path, { clinicianKey, method = "GET", body } = {}) {
-  const res = await fetch(new URL(`${PROXY_URL}/api/user-administration${path}`).toString(), {
+async function userAdministrationRequest(path, { clinicianKey, authMode, method = "GET", body } = {}) {
+  const controlled = authMode === "controlled-beta-access-key";
+  const base = controlled ? "/api/controlled-beta/user-administration" : "/api/user-administration";
+  const res = await fetch(new URL(`${PROXY_URL}${base}${path}`).toString(), {
     method,
-    headers: { Authorization: `Bearer ${clinicianKey || ""}`, ...(body !== undefined ? { "content-type": "application/json" } : {}) },
+    headers: {
+      ...(controlled
+        ? { "x-clinician-key": clinicianKey || "" }
+        : { Authorization: `Bearer ${clinicianKey || ""}` }),
+      ...(body !== undefined ? { "content-type": "application/json" } : {}),
+    },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   const data = await res.json().catch(() => ({}));
@@ -162,9 +169,34 @@ export const fetchUserAdministrationSession = (opts) => userAdministrationReques
 export const fetchManagedClinicians = (opts) => userAdministrationRequest("/clinicians", opts);
 export const inviteManagedClinician = ({ payload, ...opts }) => userAdministrationRequest("/clinicians", { ...opts, method: "POST", body: payload });
 export const runManagedClinicianAction = ({ reference, action, ...opts }) => userAdministrationRequest(`/clinicians/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`, { ...opts, method: "POST", body: {} });
-export const fetchManagedPatients = (opts) => userAdministrationRequest("/patients", opts);
-export const enrollManagedPatient = ({ payload, ...opts }) => userAdministrationRequest("/patients", { ...opts, method: "POST", body: payload });
-export const runManagedPatientAction = ({ reference, action, ...opts }) => userAdministrationRequest(`/patients/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`, { ...opts, method: "POST", body: {} });
+export const fetchManagedPatients = async (opts = {}) => {
+  if (opts.authMode !== "controlled-beta-access-key") return userAdministrationRequest("/patients", opts);
+  const result = await userAdministrationRequest("/enrollments", opts);
+  return {
+    patients: (result.enrollments || []).map((enrollment) => ({
+      reference: enrollment.enrollmentId,
+      displayName: enrollment.enrollmentId,
+      practice: "Prerna Health",
+      enrollmentState: enrollment.status,
+      invitationState: enrollment.emailDeliveryState,
+      consentState: "Awaiting patient completion",
+      activationState: enrollment.status,
+      mfaState: "Pending setup",
+      wearableSummary: "No wearable connected",
+      accessState: enrollment.status === "revoked" ? "suspended" : "active",
+    })),
+  };
+};
+export const enrollManagedPatient = ({ payload, authMode, ...opts }) => userAdministrationRequest(authMode === "controlled-beta-access-key" ? "/enrollments" : "/patients", { ...opts, authMode, method: "POST", body: payload });
+export const runManagedPatientAction = ({ reference, action, authMode, ...opts }) => {
+  if (authMode === "controlled-beta-access-key" && !["resend", "revoke"].includes(action)) {
+    return Promise.reject(Object.assign(new Error("Patient administration action is unavailable"), { code: "USER_ADMIN_ACTION_UNSUPPORTED", status: 404 }));
+  }
+  const path = authMode === "controlled-beta-access-key"
+    ? `/enrollments/${encodeURIComponent(reference)}/${action}`
+    : `/patients/${encodeURIComponent(reference)}/${encodeURIComponent(action)}`;
+  return userAdministrationRequest(path, { ...opts, authMode, method: "POST", body: {} });
+};
 export const fetchUserAdministrationAudit = ({ reference, ...opts } = {}) => userAdministrationRequest(`/audit${reference ? `?reference=${encodeURIComponent(reference)}` : ""}`, opts);
 
 export const fetchRoster = (opts) => controlledBetaClinicianRequest("/patients", opts);

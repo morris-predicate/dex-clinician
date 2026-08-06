@@ -24,6 +24,20 @@ describe("controlled-beta request authority", () => {
       expect.objectContaining({ headers: { Authorization: "Bearer signed-access-token" }, method: "GET" })
     );
   });
+  it("uses the separate controlled-beta admin boundary for an explicit access-key mode", async () => {
+    const { fetchUserAdministrationSession } = await importApi();
+    await fetchUserAdministrationSession({
+      clinicianKey: "controlled-admin-key",
+      authMode: "controlled-beta-access-key",
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://proxy.test/api/controlled-beta/user-administration/session",
+      expect.objectContaining({
+        headers: { "x-clinician-key": "controlled-admin-key" },
+        method: "GET",
+      })
+    );
+  });
   it("uses the controlled-beta roster namespace without client authority", async () => {
     vi.stubEnv("VITE_PROXY_URL", "https://api-beta.predicatelabs.ai");
     vi.stubEnv("VITE_CONTROLLED_BETA", "false");

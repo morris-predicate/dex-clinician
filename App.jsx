@@ -10,7 +10,6 @@ import { fetchUserAdministrationSession } from "./api.js";
 import {
   AUTH_MODES,
   AUTH_MODE_STORAGE_KEY,
-  isGovernedCognitoMode,
 } from "./authMode.js";
 import {
   canAccessStatusAudit,
@@ -48,11 +47,11 @@ export default function App() {
   const statusAuditAllowed = canAccessStatusAudit(clinicianRole);
   useEffect(() => {
     let active = true;
-    if (!clinicianKey || !isGovernedCognitoMode(authMode)) {
+    if (!clinicianKey || !authMode) {
       setCanManageUsers(false);
       return undefined;
     }
-    fetchUserAdministrationSession({ clinicianKey })
+    fetchUserAdministrationSession({ clinicianKey, authMode })
       .then((result) => {
         if (active) setCanManageUsers(result.canManageUsers === true);
       })
@@ -116,7 +115,7 @@ export default function App() {
     );
   }
 
-  if (activeView === "user-administration" && canManageUsers) return <UserAdministration clinicianKey={clinicianKey} onBack={() => setActiveView("patients")} onLogout={handleLogout} />;
+  if (activeView === "user-administration" && canManageUsers) return <UserAdministration clinicianKey={clinicianKey} authMode={authMode} onBack={() => setActiveView("patients")} onLogout={handleLogout} />;
 
   // ── Detail view ─────────────────────────────────────────────────────────────
   if (selectedPatientId) {
@@ -139,7 +138,7 @@ export default function App() {
       clinicianKey={clinicianKey}
       canAccessStatusAudit={statusAuditAllowed}
       onOpenStatusAudit={() => setActiveView("status-audit")}
-      onEnrollPatient={null}
+      onEnrollPatient={canManageUsers ? () => setActiveView("user-administration") : null}
       canManageUsers={canManageUsers}
       onOpenUserAdministration={() => setActiveView("user-administration")}
       onSelectPatient={setSelectedPatientId}
