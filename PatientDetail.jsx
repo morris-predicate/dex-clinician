@@ -1723,6 +1723,7 @@ export default function PatientDetail({
   patientId,
   clinicId,
   clinicianKey,
+  transcriptAvailable = true,
   onBack,
   onLogout,
 }) {
@@ -1920,6 +1921,7 @@ async function loadCurrentSignalInsight(patientData) {
 }
 
 async function handleToggleTranscript() {
+    if (!transcriptAvailable) return;
     if (showTranscript) {
       setShowTranscript(false);
       return;
@@ -3939,7 +3941,7 @@ lines.slice(0, 3).forEach((textLine, index) => {
       <section className="detail-section">
         <div className="detail-section-title-row">
           <div className="detail-section-title">Conversation transcript</div>
-          {patient.latestSessionId && (
+          {patient.latestSessionId && transcriptAvailable && (
             <button
               className="btn-secondary-small"
               onClick={handleToggleTranscript}
@@ -3953,6 +3955,12 @@ lines.slice(0, 3).forEach((textLine, index) => {
             </button>
           )}
         </div>
+
+        {!transcriptAvailable && (
+          <div className="page-sub">
+            Conversation transcripts require governed clinician sign in.
+          </div>
+        )}
 
         {transcriptError && (
           <div className="banner-error">{transcriptError}</div>

@@ -257,6 +257,24 @@ describe("Roster", () => {
     expect(onEnrollPatient).toHaveBeenCalledTimes(1);
   });
 
+  it("disables enrollment when the temporary access-key mode has no governed enrollment contract", async () => {
+    mockRosterLoads();
+
+    render(
+      <Roster
+        clinicId="predicate-admin"
+        clinicianKey="clinician-key"
+        onEnrollPatient={null}
+        onSelectPatient={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Enrollment requires secure sign in" })
+    ).toBeDisabled();
+  });
+
   it("renders an intentional safe state when optional updates fail", async () => {
     fetchRoster.mockResolvedValue({ patients: [], count: 0 });
     fetchCareTeamUpdates.mockRejectedValue({

@@ -89,12 +89,13 @@ async function request(
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 
+  const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    const err = new Error("Unauthorized");
+    const err = new Error(data.error || "Unauthorized");
     err.status = 401;
+    err.code = data.code;
     throw err;
   }
-  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message =
       patientScoped && res.status === 403
@@ -102,6 +103,7 @@ async function request(
         : data.error || `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
+    err.code = data.code;
     throw err;
   }
   return data;
@@ -123,12 +125,13 @@ async function controlledBetaClinicianRequest(
     }
   );
 
+  const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    const err = new Error("Unauthorized");
+    const err = new Error(data.error || "Unauthorized");
     err.status = 401;
+    err.code = data.code;
     throw err;
   }
-  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message =
       patientScoped && res.status === 403
@@ -136,6 +139,7 @@ async function controlledBetaClinicianRequest(
         : data.error || `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
+    err.code = data.code;
     throw err;
   }
   return data;

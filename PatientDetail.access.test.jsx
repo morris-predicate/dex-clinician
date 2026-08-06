@@ -6,6 +6,9 @@ import PatientDetail from "./PatientDetail.jsx";
 import {
   fetchPatient,
   fetchPatientBaseline,
+  fetchPatientSignals,
+  fetchPatientVitals,
+  fetchTranscript,
 } from "./api.js";
 
 vi.mock("highcharts", () => ({
@@ -77,5 +80,35 @@ describe("PatientDetail access scoping", () => {
       clinicianKey: "clinician-key",
       clinicId: "alpha-v1",
     });
+  });
+
+  it("does not request transcripts in temporary access-key mode", async () => {
+    fetchPatient.mockResolvedValue({
+      patient: {
+        patientId: "patient-123",
+        name: "Approved patient",
+        latestSessionId: "session-123",
+      },
+      vitals: [],
+    });
+    fetchPatientBaseline.mockResolvedValue({ status: "not_available" });
+    fetchPatientVitals.mockResolvedValue([]);
+    fetchPatientSignals.mockResolvedValue({ ok: true, signals: [] });
+
+    render(
+      <PatientDetail
+        patientId="patient-123"
+        clinicId="predicate-admin"
+        clinicianKey="clinician-key"
+        transcriptAvailable={false}
+        onBack={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(
+      await screen.findByText("Conversation transcripts require governed clinician sign in.")
+    ).toBeInTheDocument();
+    expect(fetchTranscript).not.toHaveBeenCalled();
   });
 });

@@ -43,6 +43,25 @@ describe("controlled-beta request authority", () => {
     });
   });
 
+  it("preserves the safe backend reason code for authentication-path failures", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: vi.fn().mockResolvedValue({
+        error: "Clinician authentication required",
+        code: "CLINICIAN_AUTH_REQUIRED",
+      }),
+    });
+    const { fetchRoster } = await importApi();
+
+    await expect(
+      fetchRoster({ clinicianKey: "dashboard-secret", clinicId: "predicate-admin" })
+    ).rejects.toMatchObject({
+      status: 401,
+      code: "CLINICIAN_AUTH_REQUIRED",
+    });
+  });
+
   it("does not send client-selected practice or actor authority on patient reads", async () => {
     const { fetchPatient } = await importApi();
 

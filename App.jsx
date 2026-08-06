@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Login from "./Login.jsx";
 import Roster from "./Roster.jsx";
 import PatientDetail from "./PatientDetail.jsx";
-import EnrollPatient from "./EnrollPatient.jsx";
 import { DEFAULT_CLINIC_ID, normalizeClinicId } from "./clinicConfig.js";
 import StatusAuditPage from "./components/StatusAuditPage.jsx";
 import UserAdministration from "./UserAdministration.jsx";
@@ -89,15 +88,6 @@ export default function App() {
     );
   }
 
-  if (activeView === "enroll") {
-    return (
-      <EnrollPatient
-        clinicId={clinicId}
-        clinicianKey={clinicianKey}
-        onBack={() => setActiveView("patients")}
-      />
-    );
-  }
   if (activeView === "user-administration" && canManageUsers) return <UserAdministration clinicianKey={clinicianKey} onBack={() => setActiveView("patients")} onLogout={handleLogout} />;
 
   // ── Detail view ─────────────────────────────────────────────────────────────
@@ -107,6 +97,7 @@ export default function App() {
         patientId={selectedPatientId}
         clinicId={clinicId}
         clinicianKey={clinicianKey}
+        transcriptAvailable={false}
         onBack={() => setSelectedPatientId(null)}
         onLogout={handleLogout}
       />
@@ -120,7 +111,7 @@ export default function App() {
       clinicianKey={clinicianKey}
       canAccessStatusAudit={statusAuditAllowed}
       onOpenStatusAudit={() => setActiveView("status-audit")}
-      onEnrollPatient={() => setActiveView("enroll")}
+      onEnrollPatient={null}
       canManageUsers={canManageUsers}
       onOpenUserAdministration={() => setActiveView("user-administration")}
       onSelectPatient={setSelectedPatientId}

@@ -4,6 +4,9 @@ import { fetchRoster } from "./api.js";
 import { CLINICS, normalizeClinicId } from "./clinicConfig.js";
 
 export function getLoginErrorMessage(error = {}) {
+  if (error.code === "CLINICIAN_AUTH_REQUIRED") {
+    return "Access-key sign in is not configured for this clinician service. Please contact support.";
+  }
   if (error.status === 401) return "Incorrect access key.";
   if (error.status === 403) return "Access denied for this clinic.";
   if (error.status === 404) {

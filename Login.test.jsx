@@ -83,6 +83,11 @@ describe("controlled-beta login contexts", () => {
   });
 
   it("maps HTTP and network failures to distinct safe login guidance", () => {
+    expect(
+      getLoginErrorMessage({ status: 401, code: "CLINICIAN_AUTH_REQUIRED" })
+    ).toBe(
+      "Access-key sign in is not configured for this clinician service. Please contact support."
+    );
     expect(getLoginErrorMessage({ status: 401 })).toBe("Incorrect access key.");
     expect(getLoginErrorMessage({ status: 403 })).toBe("Access denied for this clinic.");
     expect(getLoginErrorMessage({ status: 404 })).toBe(

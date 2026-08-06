@@ -225,13 +225,24 @@ const selectedIntelligencePatient = prioritizedPatients[0] || patients[0] || nul
           </div>
 
           <div className="command-topbar-actions">
-            <button
-              className="login-btn controlled-beta-primary-action"
-              type="button"
-              onClick={onEnrollPatient}
-            >
-              Enroll New Patient
-            </button>
+            {onEnrollPatient ? (
+              <button
+                className="login-btn controlled-beta-primary-action"
+                type="button"
+                onClick={onEnrollPatient}
+              >
+                Enroll New Patient
+              </button>
+            ) : (
+              <button
+                className="login-btn controlled-beta-primary-action"
+                type="button"
+                disabled
+                title="Patient enrollment requires governed clinician sign in."
+              >
+                Enrollment requires secure sign in
+              </button>
+            )}
             {canManageUsers && <button className="btn-secondary-small" type="button" onClick={onOpenUserAdministration}>User Administration</button>}
             <span className="command-status-pill">Pilot-Ready v1</span>
             <span className="command-status-pill healthy">Status: Ready</span>
