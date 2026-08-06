@@ -111,13 +111,15 @@ async function request(
 
 async function controlledBetaClinicianRequest(
   path,
-  { clinicianKey, method = "GET", patientScoped = false, body } = {}
+  { clinicianKey, clinicId, method = "GET", patientScoped = false, body } = {}
 ) {
   const headers = { "x-clinician-key": clinicianKey || "" };
   if (body !== undefined) headers["content-type"] = "application/json";
+  const url = new URL(`${PROXY_URL}/api/controlled-beta/clinician${path}`);
+  if (clinicId) url.searchParams.set("clinicId", clinicId);
 
   const res = await fetch(
-    new URL(`${PROXY_URL}/api/controlled-beta/clinician${path}`).toString(),
+    url.toString(),
     {
       method,
       headers,

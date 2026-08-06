@@ -36,7 +36,7 @@ describe("controlled-beta request authority", () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe(
-      "https://api-beta.predicatelabs.ai/api/controlled-beta/clinician/patients"
+      "https://api-beta.predicatelabs.ai/api/controlled-beta/clinician/patients?clinicId=prerna-health"
     );
     expect(options.headers).toEqual({
       "x-clinician-key": "dashboard-secret",
@@ -74,7 +74,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123",
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=alpha-v1",
       expect.objectContaining({
         headers: {
           "x-clinician-key": "dashboard-secret",
@@ -118,7 +118,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates/update-1/review?clinicId=alpha-v1",
       expect.objectContaining({
         method: "POST",
         headers: {
@@ -137,7 +137,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/care-team-updates",
+      "https://proxy.test/api/controlled-beta/clinician/care-team-updates?clinicId=predicate-july20-controlled-beta",
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-clinician-key": "dashboard-secret",
@@ -162,7 +162,7 @@ describe("controlled-beta request authority", () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch.mock.calls[0][0]).toBe(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123"
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=predicate-july20-controlled-beta"
     );
   });
 
@@ -237,7 +237,7 @@ describe("controlled-beta request authority", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://proxy.test/api/controlled-beta/clinician/patients",
+      "https://proxy.test/api/controlled-beta/clinician/patients?clinicId=predicate-pilot",
       expect.objectContaining({
         headers: {
           "x-clinician-key": "dashboard-secret",
@@ -256,7 +256,7 @@ describe("controlled-beta request authority", () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).not.toContain("production-v1");
-    expect(url).not.toContain("clinicId");
+    expect(url).toContain("clinicId=predicate-pilot");
     expect(options.headers["x-practice-id"]).not.toBe("production-v1");
   });
 
@@ -278,7 +278,7 @@ describe("controlled-beta request authority", () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch.mock.calls[0][0]).toBe(
-      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123"
+      "https://proxy.test/api/controlled-beta/clinician/patients/patient-123?clinicId=predicate-admin"
     );
   });
 
