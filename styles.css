@@ -4181,3 +4181,124 @@ textarea:focus-visible {
 .user-admin-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 210px; }.user-admin-actions button { font-size: 12px; padding: 6px 8px; }
 .user-admin-audit { display: grid; gap: 8px; padding-left: 20px; }
 @media (max-width: 760px) { .user-admin-form { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------------------------
+   User Administration — dark-theme contrast pass (WCAG 2.1 AA)
+
+   The .user-admin-* block above was authored against a light surface but the
+   page renders inside the dark command-center shell (--ci-black). Labels landed
+   at 1.68:1 and the primary action at 1.21:1. These rules restate the same
+   design on the dark surface; they change colour only, not layout or identity.
+   Ratios are measured against --ci-black #151b23 unless noted.
+   --------------------------------------------------------------------------- */
+
+/* Field labels: #334155 -> --ci-text (1.68:1 -> 16.19:1) */
+.user-admin-page .user-admin-form label {
+  color: var(--ci-text);
+}
+
+/* Helper, consent and secondary copy (7.96:1) */
+.user-admin-page .user-admin-form .page-sub,
+.user-admin-page .enrollment-consent span,
+.user-admin-page .user-admin-audit {
+  color: var(--ci-secondary) !important;
+}
+
+/* Inputs keep their light field surface; ensure the placeholder is legible
+   against it (7.58:1 on #fff) and that read-only fields stay readable. */
+.user-admin-page .user-admin-form input::placeholder,
+.user-admin-page .user-admin-form textarea::placeholder {
+  color: #475569;
+  opacity: 1;
+}
+.user-admin-page .user-admin-form input[readonly] {
+  background: #eef2f7;
+  color: #1f2937;
+}
+
+/* Table: readable headings, body text and separators on the dark surface */
+.user-admin-page .user-admin-list th {
+  color: var(--ci-text);
+  font-weight: 700;
+  border-bottom-color: rgba(255, 255, 255, 0.22);
+}
+.user-admin-page .user-admin-list td {
+  color: var(--ci-text);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+.user-admin-page .user-admin-list td .muted,
+.user-admin-page .user-admin-list td .muted-inline {
+  color: var(--ci-secondary);
+}
+
+/* Row actions: --ci-cyan on the dark surface (11.30:1) */
+.user-admin-page .user-admin-actions button {
+  color: var(--ci-cyan) !important;
+  font-weight: 700;
+}
+.user-admin-page .user-admin-actions button:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.12) !important;
+  color: var(--ci-text) !important;
+}
+
+/* Disabled controls stay legible rather than fading to unreadable (5.35:1).
+   WCAG exempts disabled controls, but these communicate live state. */
+.user-admin-page .user-admin-actions button:disabled {
+  opacity: 1;
+  color: #93a0b4 !important;
+  cursor: not-allowed;
+}
+
+/* Primary action: the dark-theme override put white on #d6eef6 (1.21:1).
+   Restore the intended dark ink (13.09:1) and give disabled a distinct,
+   still-readable treatment instead of a 50% fade. */
+.user-admin-page .login-btn {
+  background: #d6eef6 !important;
+  color: #102532 !important;
+}
+.user-admin-page .login-btn:disabled {
+  opacity: 1;
+  background: #9db9c4 !important;
+  color: #14232c !important;
+  cursor: not-allowed;
+}
+
+/* Status banners, restated for the dark surface (11.40:1 / 8.24:1) */
+.user-admin-page .user-admin-success {
+  background: rgba(18, 209, 142, 0.14);
+  border: 1px solid rgba(18, 209, 142, 0.42);
+  color: #6ee7b7;
+}
+.user-admin-page .banner-error {
+  background: rgba(255, 59, 92, 0.14);
+  border: 1px solid rgba(255, 59, 92, 0.45);
+  color: #ffa9b6;
+}
+
+/* Empty state */
+.user-admin-page .user-admin-list td.user-admin-empty {
+  color: var(--ci-secondary);
+  text-align: center;
+  padding: 20px 10px;
+}
+
+/* Visible keyboard focus. outline-offset places the ring outside the light
+   input, on the dark page, where cyan measures 11.30:1. */
+.user-admin-page a:focus-visible,
+.user-admin-page button:focus-visible,
+.user-admin-page input:focus-visible,
+.user-admin-page select:focus-visible,
+.user-admin-page [tabindex]:focus-visible {
+  outline: 2px solid var(--ci-cyan);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* The consent checkbox rendered as a bare default control */
+.user-admin-page .enrollment-consent input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #00b8cc;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
